@@ -98,11 +98,13 @@ $ppt = $null; $pres = $null; $mode = "sendkeys"
 if (-not $Target) {
   try {
     $ppt = New-Object -ComObject PowerPoint.Application
-    $ppt.Visible = $true
+    $ppt.Visible = -1                                  # msoTrue: PowerShell will not cast $true to MsoTriState
     Say "  Opening $(Split-Path -Leaf $Deck) ..." "DarkGray"
     $pres = $ppt.Presentations.Open($Deck, $false, $false, $true)
     $pres.SlideShowSettings.Run() | Out-Null
-    Start-Sleep -Milliseconds 900
+    # The show window can take seconds to appear, and PowerPoint rejects calls while it
+    # starts (RPC_E_CALL_REJECTED). Wait for it instead of guessing a delay.
+    for ($k = 0; $k -lt 40; $k++) { try { if ($ppt.SlideShowWindows.Count -ge 1) { break } } catch { }; Start-Sleep -Milliseconds 250 }
     $mode = "com"
     Say "  PowerPoint slide show running - animations live." "Green"
   } catch {

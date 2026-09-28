@@ -191,17 +191,25 @@ what the fix does and does not solve.
 
 ## Testing
 
-`TESTING.md` is the test plan, with results. It was run on 2026-09-27 on Windows 10
-with LibreOffice Impress and Edge: the token, `Host` and preflight checks passed, v1's
-vulnerability reproduced as intended, and a physical clicker advanced the script and
-the Impress show together. **PowerPoint mode has not been run**: there was no
-PowerPoint on the test machine. The app has a built-in self-test: call `selfTest()` in
-the browser console, or open the file with `#selftest` on the end of its address.
+`TESTING.md` is the test plan, with results. It was run on 2026-09-27/28 on Windows 10
+with Edge:
+- **LibreOffice Impress:** the token, `Host` and preflight checks passed, v1's
+  vulnerability reproduced as intended, and a physical clicker advanced the script and
+  the Impress show together.
+- **PowerPoint** (Phase A, with `demo-deck.pptx`): passed on the second attempt, after
+  a fix. The bridge opened the deck and ran the show. The page's requests moved it
+  forward and back and blanked it, with every step read back from PowerPoint, and the
+  same access checks passed.
+
+The testing found five bugs, all fixed; `TESTING.md` lists them. The app has a
+built-in self-test: call `selfTest()` in the browser console, or open the file with
+`#selftest` on the end of its address.
 
 ## Limitations
 
 - The bridge is Windows only: it depends on COM.
-- PowerPoint mode is untested (see Testing).
+- In PowerPoint mode, the physical clicker hasn't been tested end to end. The page's
+  requests were (see Testing), and the clicker-to-page step is the same as with Impress.
 - The demo deck has no animations.
 
 ## Notes

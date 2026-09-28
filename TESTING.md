@@ -86,7 +86,9 @@ through LibreOffice's automation interface.
 This is the foundation check. If it fails, stop; the architecture needs rethinking
 before anything else is worth building.
 
-Do this tomorrow, when PowerPoint is available.
+Close LibreOffice first: if PowerPoint automation fails, the bridge falls back to
+driving Impress, which could look like a pass. If PowerPoint was just installed, open
+it once and answer its first-run privacy notice; until then it rejects automation.
 
 1. Double-click `Start-Rehearsal-Bridge.cmd`.
 
@@ -247,9 +249,10 @@ rather than asserted — and it is why COM mode is the better path.
 
 ## Record the results
 
-**Run of 2026-09-27**, Windows 10, LibreOffice Impress, Edge; PowerPoint not installed.
-L1 and the clicker test used the author's own animated 7-slide deck, which is not
-published. The first pass found four bugs (listed under the table). After the fixes,
+**Run of 2026-09-27**, Windows 10, LibreOffice Impress, Edge. L1 and the clicker test
+used the author's own animated 7-slide deck, which is not published. **Phase A** was
+run later that night (2026-09-28, about 01:10), once PowerPoint was installed, with
+`demo-deck.pptx`. The first pass found four bugs (listed under the table). After the fixes,
 Phases C and D were run again against the final bridge, and those are the results
 shown.
 
@@ -259,8 +262,8 @@ shown.
 | L1 — animations play in Impress | PASS | all 7 slides matched the table |
 | L1 — slides 1 and 6: typing and wipes play | PASS | |
 | L1 — no slide waits for a click to build | PASS | one click per slide |
-| A — COM automation | **NOT RUN** | PowerPoint isn't installed; the bridge logged "Could not drive PowerPoint (… REGDB_E_CLASSNOTREG)" |
-| A — clicker advances slides | NOT RUN (PowerPoint) | the same check passed with Impress, below |
+| A — COM automation | **PASS on the second attempt** | Run 2026-09-28 ~01:10, PowerPoint (desktop Microsoft 365) with `demo-deck.pptx`. First attempt FAILED: the bridge set `$ppt.Visible = $true`, which PowerShell can't convert to Office's `MsoTriState`, so it abandoned PowerPoint (bug 5 below). After the fix, the console printed "Opening demo-deck.pptx ..." and "PowerPoint slide show running - animations live.", `/health` answered mode `com`, and the show ran full screen on the second monitor |
+| A — clicker advances slides | PASS (page's requests) | The page's exact requests (`POST /goto`, `/blank`, `/unblank` with the token, Origin `null`) moved PowerPoint 1→2→3→2, blanked it (state 3) and restored it (state 1); every step was read back from PowerPoint. The *physical* clicker wasn't used in PowerPoint mode: the tester's automated browser can't reach local servers. Clicker-to-page was verified in the Impress run. Phases C and D repeated in PowerPoint mode also passed |
 | Impress — clicker advances script and show | PASS | physical clicker ("Page Down"): app and Impress both reached slide 7 of 7 together; Back matched too. Small visible delay per slide |
 | B — v1 exploitable via `<img>` | PASS (vulnerable, as intended) | v1 console logged tests 1, 3 and 4 as accepted with no valid token |
 | B — v1 `/health` readable | PASS (vulnerable, as intended) | 200 with `Access-Control-Allow-Origin: *` to Origin `https://evil.example` |
@@ -284,6 +287,15 @@ Bugs the first pass found, all fixed the same evening:
    arrived without the token. The bridge now hands the address to the default browser's
    own program. Re-run: the new tab connected by itself.
 4. **"Token rejected — click to re-enter" didn't re-ask.** Fixed in the page.
+5. **PowerPoint mode never started (Phase A, first attempt).** `$ppt.Visible = $true`
+   throws in PowerShell ("Cannot convert value True to type MsoTriState"), and it sat
+   inside the try block, so the bridge gave up on PowerPoint. Fixed: `Visible = -1`
+   (`msoTrue`), and the bridge now waits up to 10 s for the show window instead of 0.9 s.
+
+Also seen in Phase A: **PowerPoint's first-run privacy notice blocks automation.**
+Until it's answered, PowerPoint rejects calls (`RPC_E_CALL_REJECTED`) and ignores
+input to the show. Answer it before testing. It didn't cause bug 5: that error
+reproduces with the notice closed.
 
 Also seen: v1 sent three Page Downs close together and the show moved two, since
 keystrokes are lossy. F5 didn't start Impress's show on this keyboard (a function-key
