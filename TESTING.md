@@ -263,7 +263,7 @@ shown.
 | L1 — slides 1 and 6: typing and wipes play | PASS | |
 | L1 — no slide waits for a click to build | PASS | one click per slide |
 | A — COM automation | **PASS on the second attempt** | Run 2026-09-28 ~01:10, PowerPoint (desktop Microsoft 365) with `demo-deck.pptx`. First attempt FAILED: the bridge set `$ppt.Visible = $true`, which PowerShell can't convert to Office's `MsoTriState`, so it abandoned PowerPoint (bug 5 below). After the fix, the console printed "Opening demo-deck.pptx ..." and "PowerPoint slide show running - animations live.", `/health` answered mode `com`, and the show ran full screen on the second monitor |
-| A — clicker advances slides | PASS (page's requests) | The page's exact requests (`POST /goto`, `/blank`, `/unblank` with the token, Origin `null`) moved PowerPoint 1→2→3→2, blanked it (state 3) and restored it (state 1); every step was read back from PowerPoint. The *physical* clicker wasn't used in PowerPoint mode: the tester's automated browser can't reach local servers. Clicker-to-page was verified in the Impress run. Phases C and D repeated in PowerPoint mode also passed |
+| A — clicker advances slides | **PASS with the physical clicker** (after bug 6) | ~01:26: with the page in Edge showing **Live PowerPoint ✓**, the tester's physical clicker moved the script and the PowerPoint show together, forward and back across all 4 slides. The bridge log recorded every step, and Presenter View's "slide 3 of 4" matched the page's "SLIDE 3". The page happened to hold a 7-slide speech rather than the 4-slide sample: past slide 4 the script went on while the show held its last slide. The first attempt at this is what exposed bug 6. Earlier, the page's exact requests (`POST /goto`, `/blank`, `/unblank`) moved PowerPoint 1→2→3→2, blanked it (state 3) and restored it (state 1), each read back from PowerPoint. Blank *from the clicker* wasn't reported. Phases C and D repeated in PowerPoint mode passed |
 | Impress — clicker advances script and show | PASS | physical clicker ("Page Down"): app and Impress both reached slide 7 of 7 together; Back matched too. Small visible delay per slide |
 | B — v1 exploitable via `<img>` | PASS (vulnerable, as intended) | v1 console logged tests 1, 3 and 4 as accepted with no valid token |
 | B — v1 `/health` readable | PASS (vulnerable, as intended) | 200 with `Access-Control-Allow-Origin: *` to Origin `https://evil.example` |
@@ -291,6 +291,12 @@ Bugs the first pass found, all fixed the same evening:
    throws in PowerShell ("Cannot convert value True to type MsoTriState"), and it sat
    inside the try block, so the bridge gave up on PowerPoint. Fixed: `Visible = -1`
    (`msoTrue`), and the bridge now waits up to 10 s for the show window instead of 0.9 s.
+6. **A slide number past the end of the deck killed the connection (PowerPoint mode).**
+   With more script parts than slides, the page asked for slide 5 of a 4-slide deck.
+   `GotoSlide(5)` threw, the bridge sent no reply, and the page showed "Bridge lost".
+   Fixed: the number is capped at the last slide (as Impress mode already did), and
+   PowerPoint errors now produce an `ok:false` reply instead of silence. Re-checked:
+   requests for slides 5 and 7 answered 200 and the show stayed on slide 4.
 
 Also seen in Phase A: **PowerPoint's first-run privacy notice blocks automation.**
 Until it's answered, PowerPoint rejects calls (`RPC_E_CALL_REJECTED`) and ignores

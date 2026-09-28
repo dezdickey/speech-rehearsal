@@ -196,20 +196,20 @@ with Edge:
 - **LibreOffice Impress:** the token, `Host` and preflight checks passed, v1's
   vulnerability reproduced as intended, and a physical clicker advanced the script and
   the Impress show together.
-- **PowerPoint** (Phase A, with `demo-deck.pptx`): passed on the second attempt, after
-  a fix. The bridge opened the deck and ran the show. The page's requests moved it
-  forward and back and blanked it, with every step read back from PowerPoint, and the
-  same access checks passed.
+- **PowerPoint** (Phase A, with `demo-deck.pptx`): the bridge opened the deck and ran
+  the show, and a physical clicker advanced the script and the PowerPoint show together,
+  forward and back. The page's requests also blanked and restored it, read back from
+  PowerPoint, and the same access checks passed. This took two fixes along the way.
 
-The testing found five bugs, all fixed; `TESTING.md` lists them. The app has a
+The testing found six bugs, all fixed; `TESTING.md` lists them. The app has a
 built-in self-test: call `selfTest()` in the browser console, or open the file with
 `#selftest` on the end of its address.
 
 ## Limitations
 
 - The bridge is Windows only: it depends on COM.
-- In PowerPoint mode, the physical clicker hasn't been tested end to end. The page's
-  requests were (see Testing), and the clicker-to-page step is the same as with Impress.
+- If the script has more parts than the deck has slides, the show waits on its last
+  slide while the script carries on. Matching them is up to you.
 - The demo deck has no animations.
 
 ## Notes

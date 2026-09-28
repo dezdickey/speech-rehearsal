@@ -183,10 +183,16 @@ function Get-View {
 function Go-Slide([int]$n) {
   if ($n -lt 1 -or $n -gt 999) { return $false }             # never trust the wire
   if ($mode -eq "com") {
-    $v = Get-View
-    if ($null -eq $v) { $pres.SlideShowSettings.Run() | Out-Null; Start-Sleep -Milliseconds 600; $v = Get-View }
-    if ($null -ne $v) { $v.GotoSlide($n) | Out-Null; return $true }
-    return $false
+    # Always answer: an exception here would drop the connection, and the page would
+    # read that as the bridge dying. The script may have more parts than the deck has
+    # slides, so cap at the last slide, as uno mode does.
+    try {
+      $v = Get-View
+      if ($null -eq $v) { $pres.SlideShowSettings.Run() | Out-Null; Start-Sleep -Milliseconds 600; $v = Get-View }
+      if ($null -eq $v) { return $false }
+      $v.GotoSlide([Math]::Min($n, [int]$pres.Slides.Count)) | Out-Null
+      return $true
+    } catch { return $false }
   }
   if ($mode -eq "uno") {
     try {
@@ -200,9 +206,11 @@ function Go-Slide([int]$n) {
 }
 function Set-Blank([bool]$on) {
   if ($mode -eq "com") {
-    $v = Get-View
-    if ($null -ne $v) { $v.State = $(if ($on) { 3 } else { 1 }); return $true }
-    return $false
+    try {
+      $v = Get-View
+      if ($null -ne $v) { $v.State = $(if ($on) { 3 } else { 1 }); return $true }
+      return $false
+    } catch { return $false }
   }
   if ($mode -eq "uno") {
     try {
