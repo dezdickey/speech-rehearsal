@@ -1,0 +1,33 @@
+# Build / scratch
+*.tmp
+*.bak
+unpacked/
+chk/
+odpx/
+node_modules/
+__pycache__/
+*.pyc
+
+# Rendered previews (regenerate from the .pptx)
+slide-*.jpg
+n-*.jpg
+c-*.jpg
+h-*.jpg
+f-*.jpg
+d-*.jpg
+*.odp
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Never commit a live session token or local settings dumps
+*.token
+local-settings.json
+
+# Test files that contain the author's real speech. Never commit these.
+tools/fixtures/private/
+
+# LibreOffice lock files
+.~lock.*#

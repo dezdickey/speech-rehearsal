@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+ xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
+ xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+ xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"
+ xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"
+ xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"
+ xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0"
+ xmlns:dc="http://purl.org/dc/elements/1.1/"
+ xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0"
+ office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.presentation">
+ <office:meta>
+  <dc:title>Street trees (demo deck)</dc:title>
+ </office:meta>
+ <office:automatic-styles>
+  <style:page-layout style:name="PM1">
+   <style:page-layout-properties fo:margin-top="0cm" fo:margin-bottom="0cm" fo:margin-left="0cm" fo:margin-right="0cm" fo:page-width="28cm" fo:page-height="15.75cm" style:print-orientation="landscape"/>
+  </style:page-layout>
+  <style:style style:name="dp1" style:family="drawing-page">
+   <style:drawing-page-properties draw:fill="solid" draw:fill-color="#10161b" presentation:background-visible="true" presentation:background-objects-visible="true"/>
+  </style:style>
+  <style:style style:name="gr1" style:family="graphic">
+   <style:graphic-properties draw:stroke="none" draw:fill="none" draw:textarea-vertical-align="top" draw:auto-grow-height="false" fo:padding="0cm"/>
+  </style:style>
+  <style:style style:name="gr2" style:family="graphic">
+   <style:graphic-properties draw:stroke="none" draw:fill="solid" draw:fill-color="#2dd4a7"/>
+  </style:style>
+  <style:style style:name="Pbig" style:family="paragraph">
+   <style:paragraph-properties fo:text-align="start"/>
+   <style:text-properties fo:font-family="Georgia" fo:font-size="54pt" fo:font-weight="bold" fo:color="#f4f7f9"/>
+  </style:style>
+  <style:style style:name="Ptitle" style:family="paragraph">
+   <style:paragraph-properties fo:text-align="start"/>
+   <style:text-properties fo:font-family="Georgia" fo:font-size="36pt" fo:font-weight="bold" fo:color="#f4f7f9"/>
+  </style:style>
+  <style:style style:name="Psub" style:family="paragraph">
+   <style:paragraph-properties fo:text-align="start"/>
+   <style:text-properties fo:font-family="Segoe UI" fo:font-size="24pt" fo:font-style="italic" fo:color="#2dd4a7"/>
+  </style:style>
+  <style:style style:name="Pbody" style:family="paragraph">
+   <style:paragraph-properties fo:text-align="start" fo:margin-bottom="0.35cm"/>
+   <style:text-properties fo:font-family="Segoe UI" fo:font-size="22pt" fo:color="#c9d3da"/>
+  </style:style>
+  <style:style style:name="Pnote" style:family="paragraph">
+   <style:paragraph-properties fo:text-align="start"/>
+   <style:text-properties fo:font-family="Segoe UI" fo:font-size="14pt" fo:color="#7c8b99"/>
+  </style:style>
+ </office:automatic-styles>
+ <office:master-styles>
+  <style:master-page style:name="Default" style:page-layout-name="PM1" draw:style-name="dp1"/>
+ </office:master-styles>
+ <office:body>
+  <office:presentation>
+
+   <draw:page draw:name="Title" draw:master-page-name="Default" draw:style-name="dp1">
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="4.6cm" svg:width="23.6cm" svg:height="2.8cm">
+     <draw:text-box><text:p text:style-name="Pbig">Street trees</text:p></draw:text-box>
+    </draw:frame>
+    <draw:rect draw:style-name="gr2" svg:x="2.2cm" svg:y="7.6cm" svg:width="4cm" svg:height="0.12cm"/>
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="8.1cm" svg:width="23.6cm" svg:height="1.6cm">
+     <draw:text-box><text:p text:style-name="Psub">Same sun. Different street.</text:p></draw:text-box>
+    </draw:frame>
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="13.6cm" svg:width="23.6cm" svg:height="1cm">
+     <draw:text-box><text:p text:style-name="Pnote">Demo deck for Speech Rehearsal. Pairs with the app's built-in sample speech.</text:p></draw:text-box>
+    </draw:frame>
+   </draw:page>
+
+   <draw:page draw:name="The problem" draw:master-page-name="Default" draw:style-name="dp1">
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="1.8cm" svg:width="23.6cm" svg:height="2cm">
+     <draw:text-box><text:p text:style-name="Ptitle">The problem</text:p></draw:text-box>
+    </draw:frame>
+    <draw:rect draw:style-name="gr2" svg:x="2.2cm" svg:y="4cm" svg:width="3cm" svg:height="0.1cm"/>
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="5cm" svg:width="23.6cm" svg:height="8cm">
+     <draw:text-box>
+      <text:p text:style-name="Pbody">Roads and car parks soak up heat all day and give it back all night.</text:p>
+      <text:p text:style-name="Pbody">Bare asphalt can be over 20 degrees hotter than the air above it.</text:p>
+      <text:p text:style-name="Pbody">Higher cooling bills, worse sleep, and heatwave risk for older neighbours.</text:p>
+     </draw:text-box>
+    </draw:frame>
+   </draw:page>
+
+   <draw:page draw:name="What trees do" draw:master-page-name="Default" draw:style-name="dp1">
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="1.8cm" svg:width="23.6cm" svg:height="2cm">
+     <draw:text-box><text:p text:style-name="Ptitle">What trees do</text:p></draw:text-box>
+    </draw:frame>
+    <draw:rect draw:style-name="gr2" svg:x="2.2cm" svg:y="4cm" svg:width="3cm" svg:height="0.1cm"/>
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="5cm" svg:width="23.6cm" svg:height="8cm">
+     <draw:text-box>
+      <text:p text:style-name="Pbody">Shade: the canopy stops the sun before it reaches the asphalt.</text:p>
+      <text:p text:style-name="Pbody">Evaporation: leaves release water, which cools the air around them.</text:p>
+      <text:p text:style-name="Psub">Not a gadget. A plant.</text:p>
+     </draw:text-box>
+    </draw:frame>
+   </draw:page>
+
+   <draw:page draw:name="The ask" draw:master-page-name="Default" draw:style-name="dp1">
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="1.8cm" svg:width="23.6cm" svg:height="2cm">
+     <draw:text-box><text:p text:style-name="Ptitle">The ask</text:p></draw:text-box>
+    </draw:frame>
+    <draw:rect draw:style-name="gr2" svg:x="2.2cm" svg:y="4cm" svg:width="3cm" svg:height="0.1cm"/>
+    <draw:frame draw:style-name="gr1" svg:x="2.2cm" svg:y="5cm" svg:width="23.6cm" svg:height="8cm">
+     <draw:text-box>
+      <text:p text:style-name="Pbody">Pick one street near you with no trees.</text:p>
+      <text:p text:style-name="Pbody">Ask your council to plant some.</text:p>
+      <text:p text:style-name="Psub">It starts with one email.</text:p>
+     </draw:text-box>
+    </draw:frame>
+   </draw:page>
+
+  </office:presentation>
+ </office:body>
+</office:document>

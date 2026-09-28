@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bridge access-control test</title>
+<style>
+:root{--ink:#0B1014;--surface:#141C23;--raised:#1C262F;--line:#26333E;--paper:#E9EFF4;
+ --muted:#7C8B99;--mint:#2DD4A7;--coral:#FF6B6B;--amber:#F2B544;
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--paper);padding:34px 26px;
+ font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:820px;margin:0 auto}
+h1{font-family:Georgia,serif;font-size:27px;margin:0 0 6px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+input{font-family:var(--mono);font-size:14px;background:var(--raised);color:var(--paper);
+ border:1px solid var(--line);border-radius:6px;padding:9px 11px}
+input#port{width:88px} input#tok{width:330px}
+button{font:14px inherit;background:var(--mint);color:#06231B;border:0;border-radius:6px;
+ padding:10px 18px;font-weight:700;cursor:pointer}
+.t{border:1px solid var(--line);border-radius:8px;padding:15px 17px;margin-bottom:11px;
+ background:var(--surface)}
+.t h3{margin:0 0 5px;font-size:15.5px}
+.t p{margin:0 0 9px;color:var(--muted);font-size:13.5px}
+.exp{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:9px}
+.res{font-family:var(--mono);font-size:13px;padding:8px 11px;border-radius:5px;
+ background:var(--raised);color:var(--muted)}
+.res.pass{color:var(--mint);border-left:3px solid var(--mint)}
+.res.fail{color:var(--coral);border-left:3px solid var(--coral)}
+.res.warn{color:var(--amber);border-left:3px solid var(--amber)}
+code{font-family:var(--mono);font-size:12.5px;background:var(--raised);padding:2px 6px;
+ border-radius:4px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--line);
+ border-radius:7px;padding:13px 15px;overflow-x:auto;color:#C7D2DC}
+.note{border-left:3px solid var(--amber);padding-left:13px;color:#C7D2DC;font-size:14px;
+ margin:26px 0 14px}
+</style></head><body><div class="wrap">
+
+<h1>Bridge access-control test</h1>
+<div class="sub">Open this from disk, like any hostile page would be opened from the web.
+It is a different origin from the bridge either way.</div>
+
+<div class="bar">
+  <label style="color:var(--muted);font-size:13px">port</label>
+  <input id="port" value="8765">
+  <label style="color:var(--muted);font-size:13px">token (optional)</label>
+  <input id="tok" placeholder="paste from the bridge console to test the happy path">
+  <button id="run">Run tests</button>
+</div>
+
+<div class="t">
+  <h3>1 &nbsp; Bare GET via an image tag</h3>
+  <p>No JavaScript, no CORS involved. The same-origin policy does not stop a browser
+     from loading an image, and the server acts on the request before anyone asks
+     whether the page may read the reply.</p>
+  <div class="exp">v1 expected: slide 1 appears &nbsp;|&nbsp; v2 expected: no movement (405)</div>
+  <div class="res" id="r1">not run</div>
+</div>
+
+<div class="t">
+  <h3>2 &nbsp; Unauthenticated fetch of /health</h3>
+  <p>Reconnaissance. Tells an attacker the bridge is running and which mode it is in.</p>
+  <div class="exp">v1 expected: JSON is readable &nbsp;|&nbsp; v2 expected: blocked or 401</div>
+  <div class="res" id="r2">not run</div>
+</div>
+
+<div class="t">
+  <h3>3 &nbsp; Command with no token</h3>
+  <p>A POST to <code>/goto</code> with the custom header omitted. The browser will not
+     even complete the preflight unless the server allows it.</p>
+  <div class="exp">v2 expected: rejected, and the slide does not move</div>
+  <div class="res" id="r3">not run</div>
+</div>
+
+<div class="t">
+  <h3>4 &nbsp; Command with a wrong token</h3>
+  <p>Proves the credential is actually compared, not merely required to be present.</p>
+  <div class="exp">v2 expected: 401</div>
+  <div class="res" id="r4">not run</div>
+</div>
+
+<div class="t">
+  <h3>5 &nbsp; Command with the real token</h3>
+  <p>The control case. If this fails, the tests above prove nothing &mdash; a bridge that
+     rejects everything is not the same as a bridge that rejects the right things.</p>
+  <div class="exp">v2 expected: 200, and slide 3 appears</div>
+  <div class="res" id="r5">paste a token to run this one</div>
+</div>
+
+<div class="note">
+  <b>Host validation cannot be tested from a browser.</b> JavaScript is forbidden from
+  setting the <code>Host</code> header, which is exactly why that check is worth having.
+  Test it from a terminal instead:
+</div>
+
+<pre>curl -i -X POST "http://127.0.0.1:8765/goto?n=2" ^
+  -H "Host: evil.example" ^
+  -H "X-Rehearsal-Token: PASTE_REAL_TOKEN"
+
+REM v2 expected:  HTTP/1.1 403 Forbidden   {"ok":false,"error":"bad host"}
+REM This is the DNS-rebinding defence. A real token is not enough on its own.</pre>
+
+<script>
+const $ = id => document.getElementById(id);
+const base = () => "http://127.0.0.1:" + ($("port").value || "8765");
+const set = (id, cls, txt) => { const e = $(id); e.className = "res " + cls; e.textContent = txt; };
+
+function imgProbe(url){
+  return new Promise(res => {
+    const im = new Image(); let done = false;
+    const finish = w => { if(!done){ done = true; res(w); } };
+    im.onload = () => finish("loaded");
+    im.onerror = () => finish("error");           // fires for 405 and for success-with-non-image
+    setTimeout(() => finish("timeout"), 2500);
+    im.src = url;
+  });
+}
+
+async function run(){
+  const tok = $("tok").value.trim();
+
+  // 1 - image tag GET
+  set("r1","warn","sending...");
+  const w = await imgProbe(base() + "/goto?n=1");
+  set("r1","warn","request was dispatched (" + w + ") - watch the slide show. "
+    + "Movement means v1 is exposed; no movement means v2 refused it.");
+
+  // 2 - unauthenticated read
+  set("r2","warn","fetching...");
+  try{
+    const r = await fetch(base() + "/health");
+    const t = await r.text();
+    set("r2","fail","READABLE - " + r.status + " " + t.slice(0,90)
+      + "   (v1 behaviour: any site can fingerprint this service)");
+  }catch(e){
+    set("r2","pass","blocked - " + e.message + "   (v2 behaviour)");
+  }
+
+  // 3 - no token
+  set("r3","warn","posting...");
+  try{
+    const r = await fetch(base() + "/goto?n=2", { method:"POST" });
+    set("r3", r.ok ? "fail" : "pass", "status " + r.status
+      + (r.ok ? "   ACCEPTED - the endpoint is unguarded" : "   rejected"));
+  }catch(e){
+    set("r3","pass","blocked before sending - " + e.message
+      + "   (preflight refused: the custom header cannot be attached)");
+  }
+
+  // 4 - wrong token
+  set("r4","warn","posting...");
+  try{
+    const r = await fetch(base() + "/goto?n=2", { method:"POST",
+      headers:{ "X-Rehearsal-Token": "0".repeat(48) } });
+    set("r4", r.status === 401 ? "pass" : "fail", "status " + r.status
+      + (r.status === 401 ? "   correctly rejected" : "   expected 401"));
+  }catch(e){ set("r4","warn","request blocked - " + e.message); }
+
+  // 5 - control case
+  if(!tok){ set("r5","warn","paste a token to run this one"); return; }
+  set("r5","warn","posting...");
+  try{
+    const r = await fetch(base() + "/goto?n=3", { method:"POST",
+      headers:{ "X-Rehearsal-Token": tok } });
+    const t = await r.text();
+    set("r5", r.ok ? "pass" : "fail", "status " + r.status + " " + t.slice(0,90)
+      + (r.ok ? "   slide 3 should be up" : ""));
+  }catch(e){ set("r5","fail","failed - " + e.message); }
+}
+$("run").onclick = run;
+</script>
+</div></body></html>

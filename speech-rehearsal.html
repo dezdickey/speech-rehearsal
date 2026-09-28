@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speech rehearsal</title>
+<style>
+:root{--ink:#0B1014;--surface:#141C23;--raised:#1C262F;--line:#26333E;
+ --paper:#E9EFF4;--muted:#7C8B99;--mint:#2DD4A7;--coral:#FF6B6B;--amber:#F2B544;
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+ --z:1; --lh:1.58; --measure:62ch;
+ --read:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ --serif:Georgia,"Times New Roman",serif;
+ /* one colour per slide in the split editor; adjacent slides always differ */
+ --c0:#7CC8F8;--c1:#F7A86B;--c2:#9BE38A;--c3:#F492C0;--c4:#B9A5FF;--c5:#5EDBC4;--c6:#E3D46A;--c7:#D9B99B}
+
+html[data-theme=light]{
+  --ink:#F6F8FA; --surface:#FFFFFF; --raised:#E7EDF2; --line:#CBD6DF;
+  --paper:#141C24; --muted:#5A6875; --mint:#0B7F63; --coral:#C43D3D; --amber:#9A6B05;
+  --c0:#0B6FA8;--c1:#B4540F;--c2:#2E7D1E;--c3:#B0306E;--c4:#5B3FC4;--c5:#0A7C68;--c6:#7A6A00;--c7:#8A5A35;
+}
+html[data-theme=light] button.go{color:#FFFFFF}
+html[data-theme=light] .slideno{color:#FFFFFF}
+html[data-theme=light] .seg{background:#DDE5EC}
+html[data-theme=light] .seg .fill{background:#C3CFDA}
+html[data-theme=light] td{border-bottom:1px solid #E2E9EF}
+html[data-theme=light] #unfocused{background:var(--amber);color:#FFF8E6}
+html[data-theme=light] .script .do{background:rgba(154,107,5,.10)}
+html[data-theme=light] .note{color:#3A4854}
+html[data-theme=light] .sheet{background:rgba(240,244,247,.94)}
+*{box-sizing:border-box} html,body{margin:0;height:100%}
+[hidden]{display:none!important}
+body{background:var(--ink);color:var(--paper);font-family:var(--sans);
+ display:flex;flex-direction:column;overflow:hidden}
+header{border-bottom:1px solid var(--line);padding:13px 22px 11px;
+ display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.clock{font-family:var(--mono);font-size:56px;font-weight:700;line-height:.9;
+ font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.clock.over{color:var(--coral)}
+.meta{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted)}
+.meta b{color:var(--paper);font-family:var(--mono);font-size:14px}
+.delta{font-family:var(--mono);font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+.delta.ahead{color:var(--mint)}.delta.behind{color:var(--coral)}.delta.flat{color:var(--muted)}
+.spacer{flex:1}
+button{font-family:var(--sans);font-size:13px;color:var(--paper);background:var(--raised);
+ border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+button.go{background:var(--mint);color:#06231B;border-color:var(--mint);font-weight:700}
+button:disabled{opacity:.55;cursor:default}
+.levels{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.levels button{border:0;border-radius:0;background:transparent;padding:8px 13px}
+.levels button[aria-pressed=true]{background:var(--raised);color:var(--mint);font-weight:700}
+.ribbon{padding:10px 22px 12px;border-bottom:1px solid var(--line)}
+.track{display:flex;gap:2px;height:26px}
+.seg{position:relative;background:var(--surface);border-radius:2px;overflow:hidden;min-width:8px}
+.seg .fill{position:absolute;inset:0;width:0;background:var(--raised)}
+.seg.done .fill{background:var(--mint);opacity:.5}
+.seg.done.over .fill{background:var(--coral);opacity:.55}
+.seg.now .fill{background:var(--mint);opacity:.85}
+.seg.now.over .fill{background:var(--coral);opacity:.9}
+.seg span{position:absolute;left:6px;top:6px;font-size:10px;font-family:var(--mono);
+ opacity:.8;pointer-events:none;white-space:nowrap}
+.ghosts{display:flex;gap:2px;height:11px;margin-top:4px}
+.gh{position:relative;min-width:8px}
+.gh i{position:absolute;top:3px;height:3px;border-radius:2px;background:var(--muted);opacity:.45;left:0}
+.gh i.over{background:var(--coral);opacity:.55}
+.rlab{display:flex;justify-content:space-between;margin-top:6px;font-family:var(--mono);
+ font-size:10.5px;color:var(--muted)}
+main{flex:1;overflow-y:auto;padding:24px 22px 8px;display:flex;justify-content:center}
+.wrap{width:100%;max-width:900px}
+.shead{display:flex;align-items:baseline;gap:12px;margin-bottom:15px;flex-wrap:wrap}
+.slideno{font-family:var(--mono);font-size:12px;font-weight:700;background:var(--mint);
+ color:#06231B;border-radius:4px;padding:4px 10px;letter-spacing:.5px}
+.shead h1{font-family:var(--serif);font-size:22px;margin:0}
+.chip{font-family:var(--mono);font-size:11px;background:var(--raised);border:1px solid var(--line);
+ border-radius:4px;padding:3px 8px;color:var(--muted)}
+.script p{font-size:calc(25px * var(--z));line-height:var(--lh);margin:0 0 17px;
+ max-width:var(--measure);font-family:var(--read)}
+.script strong{color:var(--mint);font-weight:700}
+.script .p{display:inline-block;color:var(--amber);font-style:normal;padding:0 5px;font-size:19px}
+.keys{font-family:var(--mono);font-size:calc(20px * var(--z));line-height:calc(var(--lh) * 1.18)}
+.cueonly{font-family:var(--serif);font-size:calc(74px * var(--z));font-weight:700;color:var(--muted);
+ letter-spacing:2px;margin-top:22px}
+footer{border-top:1px solid var(--line);padding:11px 22px;display:flex;align-items:center;
+ gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+footer b{color:var(--paper)}
+kbd{font-family:var(--mono);font-size:11px;background:var(--raised);border:1px solid var(--line);
+ border-radius:4px;padding:2px 6px;color:var(--muted)}
+.echo{font-family:var(--mono);font-size:11.5px;border:1px solid var(--line);border-radius:5px;
+ padding:5px 10px;background:var(--surface)}
+.echo.hit{border-color:var(--mint);color:var(--mint)}
+.echo.miss{border-color:var(--amber);color:var(--amber)}
+#blank{position:fixed;inset:0;background:#000;display:none;z-index:20}
+#blank.on{display:block}
+#blank p{color:#1e2a33;font-family:var(--mono);font-size:13px;position:absolute;
+ bottom:26px;width:100%;text-align:center;margin:0}
+.sheet{position:fixed;inset:0;background:rgba(8,12,15,.94);display:none;align-items:center;
+ justify-content:center;padding:20px;z-index:9}
+.sheet.on{display:flex}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;max-width:660px;
+ width:100%;padding:26px 28px;max-height:88vh;overflow:auto}
+.panel h2{font-family:var(--serif);margin:0 0 4px;font-size:24px}
+.tot{font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);
+ padding-bottom:7px;border-bottom:1px solid var(--line)}
+td{padding:8px 0;border-bottom:1px solid #1b242c;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.n{font-family:var(--sans)}
+td.d.behind{color:var(--coral);font-weight:700} td.d.ahead{color:var(--mint)}
+.verdict{margin-top:17px;font-size:14px;line-height:1.55;color:var(--paper);
+ border-left:3px solid var(--mint);padding-left:13px}
+.verdict.bad{border-color:var(--coral)}
+.script .do{display:inline-block;font-style:normal;font-family:var(--mono);font-size:13.5px;color:var(--amber);background:rgba(242,181,68,.10);border:1px solid rgba(242,181,68,.35);border-radius:5px;padding:2px 9px;margin:0 5px;vertical-align:3px}
+.script .beat,.script .stop{display:inline-block;vertical-align:-4px;border-radius:2px;margin:0 9px}
+.script .beat{width:4px;height:24px;background:var(--amber)}
+.script .stop{width:12px;height:24px;background:transparent;background-image:linear-gradient(90deg,var(--coral) 0 4px,transparent 4px 8px,var(--coral) 8px 12px)}
+
+#opts{position:fixed;top:0;right:0;bottom:0;width:330px;max-width:88vw;z-index:18;
+ background:var(--surface);border-left:1px solid var(--line);padding:20px 22px;
+ overflow-y:auto;transform:translateX(102%);display:flex;flex-direction:column;gap:17px}
+#opts.on{transform:none}
+@media (prefers-reduced-motion:no-preference){#opts{transition:transform .2s ease}}
+#opts h3{font-family:var(--serif);font-size:19px;margin:0}
+#opts .grp{display:flex;flex-direction:column;gap:7px}
+#opts label{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+#opts select,#opts input[type=range]{width:100%}
+#opts select{font-family:var(--sans);font-size:13px;background:var(--raised);color:var(--paper);
+ border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+#opts input[type=range]{accent-color:var(--mint)}
+.seg2{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg2 button{flex:1;border:0;border-radius:0;background:transparent;padding:8px 4px;font-size:12.5px}
+.seg2 button[aria-pressed=true]{background:var(--raised);color:var(--mint);font-weight:700}
+.chk{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--paper);
+ text-transform:none;letter-spacing:0}
+.chk input{accent-color:var(--mint);width:16px;height:16px}
+#opts .val{font-family:var(--mono);font-size:11.5px;color:var(--muted);float:right}
+#opts hr{border:0;border-top:1px solid var(--line);margin:2px 0}
+.hide-ribbon .ribbon{display:none}
+.hide-note .note{display:none}
+.hide-cues .script .do{display:none}
+
+.editbox{display:block;width:100%;max-width:var(--measure);min-height:180px;resize:vertical;
+ background:var(--surface);color:var(--paper);border:2px dashed var(--amber);border-radius:6px;
+ padding:12px 14px;font-family:var(--read);font-size:calc(22px * var(--z));line-height:var(--lh)}
+.editbox:focus{outline:none;border-color:var(--mint)}
+#editBtn[aria-pressed=true]{background:var(--amber);color:#2A1D02;border-color:var(--amber);
+ font-weight:700}
+#editBar{position:fixed;left:0;right:0;bottom:0;display:none;z-index:14;
+ background:var(--amber);color:#2A1D02;font-weight:700;font-size:13.5px;text-align:center;
+ padding:9px}
+#editBar.on{display:block}
+#opts .wcount{font-family:var(--mono);font-size:12px;color:var(--muted);
+ background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+#opts .wcount b{color:var(--paper)}
+#unfocused{position:fixed;left:0;right:0;bottom:0;display:none;z-index:15;cursor:pointer;
+ background:var(--amber);color:#2A1D02;font-weight:700;font-size:14px;text-align:center;padding:11px}
+#unfocused.on{display:block}
+.dot{width:8px;height:8px;border-radius:50%;background:#3A4854;display:inline-block}
+.dot.live{background:var(--mint);box-shadow:0 0 7px var(--mint)}
+.legend{display:flex;gap:15px;align-items:center;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;vertical-align:-2px;border-radius:2px;margin-right:5px}
+.legend i.b{width:4px;height:13px;background:var(--amber)}
+.legend i.s{width:12px;height:13px;background-image:linear-gradient(90deg,var(--coral) 0 4px,transparent 4px 8px,var(--coral) 8px 12px)}
+.legend b.d{color:var(--amber);font-family:var(--mono)}
+.note{font-size:calc(14.5px * var(--z));line-height:1.5;color:#A9B7C4;border-left:3px solid var(--mint);padding:2px 0 2px 13px;margin:0 0 20px;max-width:70ch}
+.script p.empty{color:var(--muted);font-style:italic}
+.keys .kline{margin:0 0 4px;max-width:var(--measure)}
+.keys .kpara{margin-top:16px}
+.keys strong{color:var(--mint)}
+#opts .trow{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--paper)}
+#opts .trow span:first-child{flex:1}
+#opts .trow input{width:78px;font:13px var(--mono);background:var(--raised);color:var(--paper);
+ border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+#opts .unit{color:var(--muted);font-size:12px;min-width:62px}
+
+/* ---- setup ---- */
+.panel.wide{max-width:780px}
+.lead{color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 16px}
+.resume{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--raised);
+ border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:14px}
+.resume .grow{flex:1;min-width:200px}
+.resume small{display:block;color:var(--muted);font-family:var(--mono);font-size:12px;margin-top:3px}
+#pasteBox{display:block;width:100%;min-height:230px;resize:vertical;background:var(--ink);
+ color:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+ font:14px/1.55 var(--read)}
+#pasteBox:focus{outline:2px solid var(--mint);outline-offset:1px}
+.drop #pasteBox{outline:2px dashed var(--mint);outline-offset:2px}
+.srow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.fname{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.detect{margin-top:14px;font-size:13.5px;line-height:1.55}
+.detect b{color:var(--mint)}
+.count{margin-top:8px;font-size:13.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.count input{width:70px;font:14px var(--mono);background:var(--raised);color:var(--paper);
+ border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.count small{color:var(--muted);font-size:12px}
+.err{margin-top:12px;color:var(--coral);font-size:13.5px}
+.small{font-size:12px;color:var(--muted);line-height:1.5;margin:16px 0 0}
+
+/* ---- split editor ---- */
+#editor{position:fixed;inset:0;z-index:8;background:var(--ink);display:none;flex-direction:column}
+#editor.on{display:flex}
+.ebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 22px;
+ border-bottom:1px solid var(--line)}
+.emeth b{font-family:var(--serif);font-size:19px;font-weight:700}
+.emeth span{color:var(--muted);font-size:13px}
+.etotal{font-family:var(--mono);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.etotal.over{color:var(--coral)}
+#eCheck{border-color:var(--amber);color:var(--amber)}
+.emsgs{display:flex;gap:12px;align-items:flex-start;padding:9px 22px;font-size:12.5px;
+ line-height:1.5;color:var(--paper);background:var(--surface);border-bottom:1px solid var(--line)}
+.emsgs div{flex:1}
+.emsgs button{padding:3px 10px;font-size:12px}
+.ehint{padding:8px 22px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);
+ min-height:34px}
+.escroll{flex:1;overflow-y:auto;padding:14px 22px 80px;display:flex;justify-content:center}
+.etext{width:100%;max-width:820px;font-family:var(--read);font-size:calc(19px * var(--z));line-height:1.62}
+.etext p{margin:0 0 10px}
+.etext p.cont::before{content:"\2026\00a0";color:var(--muted)}
+.part{border-left:3px solid currentColor;padding:2px 0 2px 14px;margin:0 0 4px;min-height:4px}
+.c0{--sc:var(--c0)}.c1{--sc:var(--c1)}.c2{--sc:var(--c2)}.c3{--sc:var(--c3)}
+.c4{--sc:var(--c4)}.c5{--sc:var(--c5)}.c6{--sc:var(--c6)}.c7{--sc:var(--c7)}
+.part,.cut{color:var(--sc)}
+.w{cursor:pointer;border-radius:3px}
+.w:hover{background:var(--raised)}
+.w.st{font-weight:700}
+.w.mv{background:var(--raised);text-decoration:underline dotted}
+.w.cuthere{box-shadow:-3px 0 0 0 var(--paper)}
+.etext .do{font:13px var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:4px;
+ padding:1px 6px;font-style:normal}
+.pb,.ps{font:13px var(--mono);color:var(--muted)}
+.cut{display:flex;align-items:center;gap:8px;margin:16px 0 6px;padding-top:6px;
+ border-top:2px solid currentColor;cursor:ns-resize;user-select:none;touch-action:none}
+.cut.first{cursor:default;margin-top:4px}
+.cut.unsure{border-top-style:dashed}
+.cut.willmove{border-top-width:4px}
+.cut.dragging{opacity:.45;pointer-events:none}
+.cut:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+.clab{font:12px var(--mono);color:var(--muted)}
+.clab b{color:var(--sc)}
+.cnote{font-style:italic}
+.ccheck{font-size:11px;padding:2px 9px;background:transparent;border:1px solid var(--amber);
+ color:var(--amber);border-radius:10px}
+.cren{font-size:12px;padding:1px 7px;background:transparent;border:0;color:var(--muted)}
+body.dragmode,body.dragmode *{cursor:ns-resize!important;user-select:none}
+#selftest{position:fixed;inset:0;z-index:30;overflow:auto;background:var(--ink);padding:24px;
+ font:13px/1.6 var(--mono)}
+#selftest .pass{color:var(--mint)}#selftest .fail{color:var(--coral);font-weight:700}
+@keyframes hold{0%{opacity:.25}12%{opacity:1}88%{opacity:1}100%{opacity:.25}}
+@media (prefers-reduced-motion:no-preference){.script .stop{animation:hold 3s ease-in-out infinite}}
+@media (prefers-reduced-motion:no-preference){.seg .fill{transition:width .25s linear}}
+@media (max-width:640px){.clock{font-size:40px}.script p{font-size:20px}.cueonly{font-size:44px}}
+</style></head><body>
+
+<header>
+  <div class="clock" id="clock">0:00</div>
+  <div class="meta"><span>slide target</span><b id="segTarget">0:00</b></div>
+  <div class="meta"><span>vs. plan</span><div class="delta flat" id="delta">—</div></div>
+  <div class="spacer"></div>
+  <div class="levels" role="group" aria-label="Detail level">
+    <button id="L1" aria-pressed="true">Full script</button>
+    <button id="L2" aria-pressed="false">Keywords</button>
+    <button id="L3" aria-pressed="false">Cue only</button>
+  </div>
+  <span class="dot" id="liveDot"></span><button class="go" id="liveBtn">Live PowerPoint</button>
+  <button id="setupBtn" title="Change the speech">Speech</button>
+  <button id="splitBtn" title="Fix where each slide starts">Split</button>
+  <button class="go" id="go">Start</button>
+  <button id="editBtn" aria-pressed="false" title="Edit the wording (e)">Edit text</button><button id="optsBtn" title="Options (,)">Options</button>
+  <button id="reset">Reset</button>
+</header>
+
+<div class="ribbon">
+  <div class="track" id="track"></div>
+  <div class="ghosts" id="ghosts"></div>
+  <div class="rlab"><span>0:00</span><span id="planTotal"></span><span id="limitLab">5:00 limit</span></div>
+</div>
+
+<main><div class="wrap">
+  <div class="shead">
+    <span class="slideno" id="slideNo">SLIDE &ndash;</span>
+    <h1 id="label"></h1>
+    <span class="chip" id="nextLab"></span>
+  </div>
+  <div class="note" id="note" hidden></div>
+  <div id="body" class="script"></div>
+</div></main>
+
+<footer>
+  <button class="go" id="nextBtn">Next slide</button>
+  <div class="echo" id="echo">clicker — press a button to test</div>
+  <div class="legend"><span><i class="b"></i>beat ≈ 1s</span><span><i class="s"></i>full stop ≈ 3s</span><span><b class="d">[&nbsp;]</b> stage direction</span></div>
+  <div class="spacer"></div>
+  <div><kbd>PgDn</kbd> next · <kbd>PgUp</kbd> back · <kbd>F5</kbd> start ·
+    <kbd>b</kbd> blank · <kbd>Esc</kbd> reset · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> detail · <kbd>,</kbd> options</div>
+</footer>
+
+<div id="opts" aria-label="Options">
+  <h3>Options</h3>
+
+  <div class="grp"><label>Theme</label>
+    <div class="seg2" id="themeSeg">
+      <button data-v="dark" aria-pressed="true">Dark</button>
+      <button data-v="light" aria-pressed="false">Light</button>
+    </div></div>
+
+  <div class="grp"><label>Reading font</label>
+    <select id="fontSel">
+      <option value="sans">System sans</option>
+      <option value="wide">Verdana &mdash; widest spacing</option>
+      <option value="serif">Georgia &mdash; serif</option>
+      <option value="mono">Courier &mdash; monospace</option>
+    </select></div>
+
+  <div class="grp"><label>Text size <span class="val" id="zVal">100%</span></label>
+    <input type="range" id="zRange" min="70" max="180" step="5" value="100"></div>
+
+  <div class="grp"><label>Line spacing <span class="val" id="lhVal">1.58</span></label>
+    <input type="range" id="lhRange" min="120" max="220" step="4" value="158"></div>
+
+  <div class="grp"><label>Column width <span class="val" id="mwVal">62</span></label>
+    <input type="range" id="mwRange" min="34" max="90" step="2" value="62"></div>
+
+  <hr>
+  <div class="grp"><label>Timing</label>
+    <div class="trow"><span>Time limit</span><input id="limitIn" type="text" inputmode="numeric" value="5:00" aria-label="Time limit in minutes and seconds"><span class="unit">min:sec</span></div>
+    <div class="trow"><span>Speaking pace</span><input id="wpmIn" type="number" min="60" max="260" step="5" value="140" aria-label="Speaking pace in words per minute"><span class="unit">words/min</span></div>
+    <div class="trow"><span>Slide with no words</span><input id="holdIn" type="number" min="0" max="60" step="1" value="3" aria-label="Seconds to hold a slide with no words"><span class="unit">seconds</span></div>
+    <label class="chk"><input type="checkbox" id="cStretch"> Stretch targets to fill the limit</label>
+  </div>
+
+  <hr>
+  <div class="grp"><label>Your script</label>
+    <div class="wcount" id="wcount">&mdash;</div>
+    <div style="display:flex;gap:8px;margin-top:7px">
+      <button class="go" id="copyAll" style="flex:1">Copy full speech</button>
+      <button id="dlTxt" title="Save the speech with its slide markers as a .txt file">Save .txt</button>
+    </div>
+    <button id="restoreTxt">Restore the imported version</button>
+    <button id="oldEdits" hidden title="Your rewrites of the old built-in speech, as text with slide markers">Copy my edits from the old version</button>
+  </div>
+
+  <hr>
+  <div class="grp"><label>Show</label>
+    <label class="chk"><input type="checkbox" id="cRibbon" checked> Pace bar</label>
+    <label class="chk"><input type="checkbox" id="cNote" checked> Delivery note</label>
+    <label class="chk"><input type="checkbox" id="cCues" checked> Stage directions</label>
+  </div>
+
+  <hr>
+  <div style="display:flex;gap:9px">
+    <button id="optsReset">Reset defaults</button>
+    <button class="go" id="optsClose" style="flex:1">Done</button>
+  </div>
+  <div style="font-size:11.5px;color:var(--muted);line-height:1.5">
+    Settings are saved on this computer. Press <kbd>,</kbd> to reopen this panel.
+  </div>
+</div>
+<div id="editBar">Editing this slide. One paragraph per line; <b>//</b> beat, <b>///</b> full stop, <b>**word**</b> stress, <b>[[…]]</b> stage direction. Click <b>Edit text</b> or press <b>Esc</b> when done.</div>
+<div id="blank"><p>screen blanked — press b or Esc</p></div>
+<div id="unfocused">This window is not focused — the clicker will not reach it. Click here.</div>
+
+<div class="sheet" id="sheet"><div class="panel">
+  <h2>Run complete</h2><div class="tot" id="runTot"></div>
+  <table><thead><tr><th>Slide</th><th>Target</th><th>You</th><th>Diff</th></tr></thead>
+  <tbody id="rows"></tbody></table>
+  <div class="verdict" id="verdict"></div>
+  <div style="margin-top:20px;display:flex;gap:10px">
+    <button class="go" id="again">Run it again</button><button id="closeSheet">Close</button></div>
+</div></div>
+
+<div class="sheet" id="setup"><div class="panel wide" id="setupPanel">
+  <h2>Your speech</h2>
+  <p class="lead">Paste it, or open a .txt or .docx file. Everything stays on this computer.</p>
+  <div class="resume" id="resume" hidden>
+    <div class="grow">Continue with <b id="resumeName"></b><small id="resumeInfo"></small></div>
+    <button id="resumeEdit">Edit the split</button>
+    <button class="go" id="resumeGo">Continue</button>
+  </div>
+  <textarea id="pasteBox" spellcheck="false" aria-label="Your speech"
+    placeholder="Paste your speech here.&#10;&#10;To mark where each slide starts, put [SLIDE 1], [SLIDE 2] … before it, or a line like “Slide 2 – Title”. Without markers you choose how many slides, and fix the split in the editor.&#10;&#10;Optional: // beat, /// full stop, **word** stress, [[…]] stage direction."></textarea>
+  <div class="srow">
+    <button id="openFile">Open .txt or .docx…</button>
+    <input type="file" id="fileIn" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+    <button id="sampleBtn">Try the sample</button>
+    <span class="fname" id="fileName"></span>
+  </div>
+  <div class="detect" id="detect"></div>
+  <div class="count" id="countRow" hidden>
+    <label for="countIn">How many slides are in your presentation?</label>
+    <input id="countIn" type="number" min="1" max="200" step="1">
+    <small>The speech is cut into that many equal parts for you to fix.</small>
+  </div>
+  <div class="err" id="setupErr" hidden></div>
+  <div class="srow">
+    <button class="go" id="splitGo" disabled>Split into slides</button>
+    <button id="setupCancel" hidden>Cancel</button>
+  </div>
+  <p class="small">Your presentation: open it in PowerPoint or Impress as usual. With the bridge running, the app moves it along with you.</p>
+</div></div>
+
+<div id="editor" aria-label="Split editor">
+  <div class="ebar">
+    <div class="emeth"><b id="eMethod"></b> <span id="eAdj"></span></div>
+    <div class="spacer"></div>
+    <span class="etotal" id="eTotal"></span>
+    <button id="eCheck" hidden></button>
+    <button id="eUndo" title="Undo (Ctrl+Z)">Undo</button>
+    <button id="eRedo" title="Redo (Ctrl+Y)">Redo</button>
+    <button id="eTiming" title="Time limit and speaking pace">Timing…</button>
+    <button id="eSetup">Change speech</button>
+    <button class="go" id="eDone">Rehearse</button>
+  </div>
+  <div class="emsgs" id="eMsgs" hidden><div id="eMsgList"></div><button id="eMsgClose">Dismiss</button></div>
+  <div class="ehint" id="eHint"></div>
+  <div class="escroll" id="eScroll"><div class="etext" id="eText"></div></div>
+</div>
+
+<script>
+"use strict";
+/* ---- speech rehearsal ------------------------------------------------------------
+   One self-contained file. The speech is the user's own: pasted, or opened from
+   .txt or .docx, split into one part per slide, fixed in the split editor, then
+   rehearsed against a timer. Nothing leaves this computer; the only network
+   traffic is to the local bridge on 127.0.0.1, and only when it is running.     */
+const $=id=>document.getElementById(id);
+const mmss=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const sgn=s=>{const r=Math.round(s);return (r>0?"+":r<0?"−":"")+Math.abs(r)+"s"};
+function el(tag,cls,text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+const txt=s=>document.createTextNode(s);
+
+/* Storage is wrapped everywhere: it works from file://, and sandboxed previews
+   throw on access. Without it the app still runs, it just forgets on reload.
+
+   Storage is also SHARED. Chrome gives every page opened from disk one
+   localStorage, and other apps live in it (the author's Flowlist board does).
+   So: every key starts with "speech-rehearsal.", nothing ever calls clear(),
+   nothing removes a key this app didn't write, and what it stores stays small.
+   The only removals are the old names this app itself used before, once their
+   values are safely copied under the new names.                            */
+const PREFIX="speech-rehearsal.";
+const K_OPTS=PREFIX+"opts", K_PROJ=PREFIX+"project", K_OLDEDITS=PREFIX+"old-edits";
+const STORE_MAX=256*1024;     // characters per key; a speech is a few dozen KB at most
+const OLD_KEYS=[["speechRehearsal.opts",K_OPTS],["speechRehearsal.project",K_PROJ],
+  ["hashing.opts",K_OPTS],["hashing.text",K_OLDEDITS]];
+function migrateKeys(st){
+  try{
+    for(const [from,to] of OLD_KEYS){
+      const v=st.getItem(from); if(v===null) continue;
+      if(st.getItem(to)===null) st.setItem(to,v);      // newer names are listed first and win
+      if(st.getItem(to)!==null) st.removeItem(from);    // only once the value is safe under the new name
+    }
+  }catch(e){}
+}
+function load(key){ try{ const s=localStorage.getItem(key); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function store(key,v){
+  try{ const s=JSON.stringify(v); if(s.length>STORE_MAX) return false; localStorage.setItem(key,s); return true; }
+  catch(e){ return false; }   // full or blocked: never make room by deleting anything
+}
+
+/* ---- Live PowerPoint bridge -------------------------------------------------
+   rehearsal-bridge.ps1 drives a real slide show through PowerPoint's automation
+   interface, so animations play and focus stays here with the clicker.
+
+   Every command is a POST carrying X-Rehearsal-Token. The custom header is not
+   incidental: it forces the browser to preflight, and the bridge only answers a
+   preflight for known origins. A page on some other site cannot attach it, so it
+   cannot reach the endpoint even though the endpoint is on this machine.      */
+let live=false, lastPushed=-1, BASE=null, TOKEN=null, tokenBad=false;
+const PORTS=[8765,8766,8767];
+
+/* The bridge launches this page with #t=<token>. Fragments never go over the
+   wire. Strip it from the address bar once read so it is not left on screen. */
+(function(){
+  const m=(location.hash||"").match(/t=([0-9a-f]{32,})/i);
+  if(m){ TOKEN=m[1];
+    try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} }
+})();
+
+async function call(path,ms){
+  if(!BASE||!TOKEN) return null;
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),ms||2500);
+  try{
+    const r=await fetch(BASE+path,{method:"POST",cache:"no-store",signal:c.signal,
+      headers:{"X-Rehearsal-Token":TOKEN}});
+    clearTimeout(t);
+    if(r.status===401){ tokenBad=true; liveStatus("badtoken"); live=false; return null; }
+    return await r.json();
+  }catch(e){ clearTimeout(t); return null; }
+}
+async function findBridge(){
+  if(!TOKEN) return null;
+  for(const p of PORTS){
+    BASE="http://127.0.0.1:"+p;
+    const j=await call("/health",800);
+    if(j) return j;
+  }
+  BASE=null; return null;
+}
+async function liveToggle(){
+  if(live){ live=false; lastPushed=-1; liveStatus("off"); return; }
+  if(!TOKEN){ askToken(); return; }
+  liveStatus("checking");
+  const j=await findBridge();
+  if(!j){ liveStatus("nobridge"); return; }
+  live=true; lastPushed=-1; liveStatus(j.mode); pushSlide(true);
+}
+function askToken(){
+  const v=prompt("Paste the session token from the bridge window:");
+  if(v && /^[0-9a-f]{32,}$/i.test(v.trim())){ TOKEN=v.trim(); tokenBad=false; liveToggle(); }
+  else if(v!==null) echo("token rejected","expected a long hex string");
+}
+function liveStatus(s){
+  const b=$("liveBtn");
+  $("liveDot").className="dot"+(live?" live":"");
+  b.textContent =
+      s==="com"      ? "Live PowerPoint ✓"
+    : s==="uno"      ? "Live Impress ✓"
+    : s==="sendkeys" ? "Live (keystroke mode)"
+    : s==="checking" ? "Connecting…"
+    : s==="nobridge" ? "Start the bridge first"
+    : s==="badtoken" ? "Token rejected — click to re-enter"
+    : s==="lost"     ? "Bridge lost — click to retry"
+    : !TOKEN         ? "Connect (needs token)"
+    : "Live PowerPoint";
+  b.className = live ? "" : "go";
+  if(s==="nobridge") echo("no bridge found","run Start-Rehearsal-Bridge.cmd");
+  if(s==="badtoken") echo("401 from bridge","that token is from a previous run");
+  if(s==="lost")     echo("bridge stopped responding","is the console still open?");
+}
+async function pushSlide(force){
+  if(!live||!S.length) return;
+  const n=S[i].n;
+  if(!force && n===lastPushed) return;   // detail-level changes must not replay animations
+  lastPushed=n;
+  if(!await call("/goto?n="+n)){ live=false; lastPushed=-1; liveStatus("lost"); }
+}
+function pushBlank(){ if(live) call(blanked?"/blank":"/unblank"); }
+
+/* connect on load without being asked, so the usual case is zero clicks */
+(async()=>{ if(!TOKEN){ liveStatus("off"); return; }
+  const j=await findBridge();
+  if(j){ live=true; liveStatus(j.mode); pushSlide(true); } else liveStatus("nobridge"); })();
+
+/* ---- keep the screen awake while talking ---------------------------------- */
+let wake=null;
+async function wakeOn(){ try{ wake=await navigator.wakeLock.request("screen"); }catch(e){} }
+function wakeOff(){ try{ wake&&wake.release(); }catch(e){} wake=null; }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&running) wakeOn(); });
+
+/* ---- speech text → tokens -------------------------------------------------------
+   The speech is stored as plain text, one paragraph per line, in the markup
+   tools/parse-script.py reads:
+       //  beat, about 1 s      ///  full stop, about 3 s
+       [[...]]  stage direction, not spoken      **...**  stress
+   Tokens are {k:"w"|"b"|"s"|"d", s:text, st:stressed, p:starts a paragraph,
+   ss:starts a sentence}. A split is the token index where each slide starts.
+   Nothing imported ever becomes HTML: rendering builds DOM nodes from tokens,
+   because this page holds the bridge token and a crafted file must not run. */
+function tokenize(text){
+  const T=[];
+  for(const line of String(text).split("\n")){
+    if(!line.trim()) continue;
+    let first=true, stress=false, m;
+    const re=/\[\[([\s\S]*?)\]\]|(\S+)/g;
+    while((m=re.exec(line))){
+      let t=null;
+      if(m[1]!==undefined){ const d=m[1].replace(/\s+/g," ").trim(); if(d) t={k:"d",s:d}; }
+      else{
+        let w=m[2], a;
+        if(w==="//") t={k:"b"};
+        else if(w==="///") t={k:"s"};
+        else if(/^\*{2,}$/.test(w)) stress=!stress;
+        else{
+          let on=false, off=false;
+          if((a=w.match(/^([^\p{L}\p{N}*]*)\*\*(.+)$/u))){ w=a[1]+a[2]; on=true; }
+          if((a=w.match(/^(.+?)\*\*([^\p{L}\p{N}*]*)$/u))){ w=a[1]+a[2]; off=true; }
+          w=w.replace(/\*\*/g,"");
+          if(on) stress=true;
+          if(w) t={k:"w",s:w,st:stress};
+          if(off) stress=false;
+        }
+      }
+      if(t){ if(first){ t.p=true; first=false; } T.push(t); }
+    }
+  }
+  markSentences(T);
+  return T;
+}
+const ABBR=/^(?:mr|mrs|ms|dr|prof|st|vs|etc|e\.g|i\.e|approx|no|fig|jr|sr|inc|ltd)\.$/i;
+function markSentences(T){
+  let prev=null, para=true;
+  for(const t of T){
+    if(t.p) para=true;
+    if(t.k!=="w") continue;
+    t.ss = para || !prev ||
+      (/[.!?…]["'”’)\]]*$/.test(prev.s) && !ABBR.test(prev.s) &&
+       /^["'“‘(\[]*[\p{Lu}\p{N}]/u.test(t.s));
+    para=false; prev=t;
+  }
+}
+/* tokens → text; tokenize(detokenize(T)) gives T back */
+function detokenize(T,a=0,b=T.length){
+  const lines=[]; let cur=[], inSt=false;
+  const close=()=>{ if(inSt){ cur[cur.length-1]+="**"; inSt=false; } };
+  const flush=()=>{ close(); if(cur.length) lines.push(cur.join(" ")); cur=[]; };
+  for(let i=a;i<b;i++){
+    const t=T[i];
+    if(t.p && cur.length) flush();
+    if(t.k==="w"){
+      if(t.st && !inSt){ cur.push("**"+t.s); inSt=true; }
+      else { if(!t.st) close(); cur.push(t.s); }
+    } else { close(); cur.push(t.k==="b"?"//":t.k==="s"?"///":"[["+t.s+"]]"); }
+  }
+  flush();
+  return lines.join("\n");
+}
+function wordCounts(T){ const wc=new Array(T.length+1); let n=0; for(let i=0;i<T.length;i++){ wc[i]=n; if(T[i].k==="w") n++; } wc[T.length]=n; return wc; }
+/* Where a slide boundary may snap to: each sentence start, pulled back over any
+   stage directions just before it (a direction leads into what follows; a pause
+   belongs to what came before). Never pulled back across a paragraph start.   */
+function snapPoints(T){
+  const pts=[];
+  T.forEach((t,i)=>{ if(t.k==="w"&&t.ss){ let j=i; while(j>0&&!T[j].p&&T[j-1].k==="d") j--; pts.push(j); } });
+  return pts;
+}
+
+/* ---- raw text → paragraphs and slide markers --------------------------------------
+   Markers: [SLIDE 3] or [SLIDE 3: Title], backticks optional, any case, anywhere in
+   a line; or a line that is only "Slide 3" / "Slide 3 – Title" (a Word heading, say). */
+const MARK_LINE=/^\s*(?:#{1,6}\s*)?(?:\*\*)?\s*slide\s+(\d{1,3})\s*(?:[:.)–—-]\s*(.*?))?\s*(?:\*\*)?\s*$/i;
+const MARK_INLINE=/`?\[\s*slide\s+(\d{1,3})\s*(?:[:.–—-]\s*([^\]]*?))?\s*\]`?/gi;
+function looksLikeTitle(t){ t=(t||"").trim(); if(!t) return true; const w=t.split(/\s+/).length; return w<=10 && !(w>4 && /[.!?]$/.test(t)); }
+function cleanTitle(t){ return (t||"").replace(/\*\*/g,"").replace(/\s*\(\d+:\d\d\)\s*$/,"").replace(/[\[\]]/g,"").trim().slice(0,80); }
+function splitMarkers(raw){
+  const lines=String(raw).replace(/\r\n?/g,"\n").replace(/[​﻿]/g,"").split("\n");
+  const out={pre:[],segs:[],skipped:0}; let cur=out.pre;
+  const open=(n,title)=>{ const s={n:+n,title:cleanTitle(title),lines:[]}; out.segs.push(s); cur=s.lines; return s; };
+  for(const line of lines){
+    let m=line.match(MARK_LINE);
+    if(m){ const t=m[2]||""; if(looksLikeTitle(t)) open(m[1],t); else { open(m[1],""); cur.push(t); } continue; }
+    MARK_INLINE.lastIndex=0; let last=0, seg=null;
+    while((m=MARK_INLINE.exec(line))){
+      const before=line.slice(last,m.index); if(before.trim()) cur.push(before);
+      seg=open(m[1],m[2]||""); last=MARK_INLINE.lastIndex;
+    }
+    if(seg){
+      const rest=line.slice(last), d=rest.match(/^\s*[–—-]\s*(.+?)\s*(?:\(\d+:\d\d\))?\s*$/);
+      if(d && !seg.title && looksLikeTitle(d[1])) seg.title=cleanTitle(d[1]);
+      else if(rest.trim()) cur.push(rest);
+      continue;
+    }
+    // markdown headings and divider lines are structure, not speech
+    if(/^\s*#{1,6}\s/.test(line) || /^\s*([-*_])(\s*\1){2,}\s*$/.test(line)){ out.skipped++; continue; }
+    cur.push(line.replace(/^\s*>\s?/,""));
+  }
+  return out;
+}
+/* Hard-wrapped text (an email, an old editor) breaks lines mid-sentence at a
+   fixed width; one-paragraph-per-line text doesn't. Decide which, once.      */
+function paraMode(lines){
+  let cont=0, n=0;
+  for(let k=0;k+1<lines.length;k++){
+    const a=lines[k].trim(), b=lines[k+1].trim();
+    if(!a||!b) continue;
+    n++; if(a.length>=40 && a.length<=100 && !/[.!?:;"'”’)\]\/*]$/.test(a)) cont++;
+  }
+  return n>=3 && cont/n>=0.6 ? "blocks" : "lines";
+}
+function toParas(lines,mode){
+  const out=[]; let buf=[];
+  for(const l of lines){
+    const t=l.replace(/\s+/g," ").trim();
+    if(!t){ if(buf.length){ out.push(buf.join(" ")); buf=[]; } continue; }
+    if(mode==="lines") out.push(t); else buf.push(t);
+  }
+  if(buf.length) out.push(buf.join(" "));
+  return out;
+}
+function plural(n,w){ return n+" "+w+(n===1?"":"s"); }
+function listNums(a){ return a.length>1 ? a.slice(0,-1).join(", ")+" and "+a[a.length-1] : String(a[0]); }
+function fromMarkers(mk,mode,msgs){
+  let segs=mk.segs.map(s=>({n:s.n,title:s.title,paras:toParas(s.lines,mode)}));
+  const pre=toParas(mk.pre,mode);
+  if(pre.length){
+    if(segs[0].n>1){ segs.unshift({n:1,title:"",paras:pre}); msgs.push("The text before the first marker became slide 1."); }
+    else { segs[0].paras=pre.concat(segs[0].paras); msgs.push("The text before [SLIDE 1] was added to slide 1."); }
+  }
+  const merged=[];
+  for(const s of segs){
+    const l=merged[merged.length-1];
+    if(l&&l.n===s.n){ l.paras.push(...s.paras); if(!l.title) l.title=s.title; msgs.push("Slide "+s.n+" is marked twice in a row, so the two parts were joined."); }
+    else merged.push(s);
+  }
+  segs=merged;
+  const parts=[], unsure=[];
+  const ordered=segs.every((s,k)=>k===0||s.n>segs[k-1].n);
+  if(ordered && segs[segs.length-1].n-segs.length<=20){
+    const missing=[]; let expect=1;
+    for(const s of segs){
+      while(expect<s.n){ unsure[parts.length]=true; parts.push({title:"",paras:[]}); missing.push(expect); expect++; }
+      parts.push({title:s.title,paras:s.paras}); expect++;
+    }
+    if(missing.length) msgs.push("No marker for slide "+listNums(missing)+", so "+(missing.length>1?"those slides have":"it has")+" no words. Check for a missing marker, or leave "+(missing.length>1?"them":"it")+" empty for a title or picture slide.");
+  } else {
+    segs.forEach((s,k)=>{
+      if(k&&s.n<=segs[k-1].n){ unsure[k]=true; msgs.push("The markers go from slide "+segs[k-1].n+" to slide "+s.n+", so the slides were numbered in the order they appear."); }
+      parts.push({title:s.title,paras:s.paras});
+    });
+  }
+  return {parts,unsure};
+}
+/* No markers: cut into m roughly equal parts, preferring paragraph starts. */
+function evenStarts(T,m){
+  const wc=wordCounts(T), total=wc[T.length], per=total/m, pts=snapPoints(T), starts=[0];
+  for(let k=1;k<m;k++){
+    const goal=k*per, prev=starts[k-1];
+    let best=T.length, bd=Infinity;
+    for(const j of pts){ if(j<=prev) continue; const d=Math.abs(wc[j]-goal)*(T[j].p?0.6:1); if(d<bd){ bd=d; best=j; } }
+    starts.push(best);
+  }
+  return starts;
+}
+function newProject(raw,meta,count){
+  const mk=splitMarkers(raw), msgs=[];
+  const mode=paraMode(mk.pre.concat(...mk.segs.map(s=>s.lines)));
+  if(mk.skipped) msgs.push("Skipped "+plural(mk.skipped,"heading or divider line")+".");
+  let parts, unsure=[], method;
+  if(mk.segs.length){ ({parts,unsure}=fromMarkers(mk,mode,msgs)); method="markers"; }
+  else { parts=[{title:"",paras:toParas(mk.pre,mode)}]; method="even"; }
+  let T=[], starts=[];
+  for(const p of parts){ starts.push(T.length); T=T.concat(tokenize(p.paras.join("\n"))); }
+  markSentences(T);
+  if(!T.some(t=>t.k==="w")) throw new Error("There are no words to split.");
+  let titles=parts.map(p=>p.title);
+  if(method==="even"){
+    const m=Math.max(1,Math.min(200,Math.round(count)||1));
+    starts=evenStarts(T,m); titles=Array(m).fill(""); unsure=starts.map((_,k)=>k>0);
+    msgs.unshift("No slide markers, so the speech was cut into "+plural(m,"equal part")+" at paragraph or sentence starts. Every boundary is a guess: check each one.");
+  }
+  const p={v:1,name:meta.name||"Pasted text",source:meta.source||"paste",text:detokenize(T),
+    titles,starts,unsure:starts.map((_,k)=>k>0&&!!unsure[k]),method,msgs,adjusted:false,saved:Date.now()};
+  p.orig={text:p.text,starts:p.starts.slice(),titles:p.titles.slice(),unsure:p.unsure.slice()};
+  return p;
+}
+function validProject(p){
+  if(!p||p.v!==1||typeof p.text!=="string"||!Array.isArray(p.starts)||!p.starts.length) return null;
+  const n=tokenize(p.text).length, m=p.starts.length;
+  if(p.starts[0]!==0||p.starts.some((s,k)=>!Number.isInteger(s)||s<0||s>n||(k&&s<p.starts[k-1]))) return null;
+  p.titles=Array.from({length:m},(_,k)=>typeof (p.titles||[])[k]==="string"?p.titles[k]:"");
+  p.unsure=Array.from({length:m},(_,k)=>k>0&&!!(p.unsure||[])[k]);
+  p.msgs=Array.isArray(p.msgs)?p.msgs.filter(s=>typeof s==="string"):[];
+  const o=p.orig;
+  if(o&&typeof o==="object"&&o.text==null) o.text=p.text;    // saved as null when unchanged, to store less
+  const on=o&&typeof o.text==="string"?tokenize(o.text).length:-1;
+  if(on<0||!Array.isArray(o.starts)||!o.starts.length||o.starts[0]!==0||o.starts.some((s,k)=>!Number.isInteger(s)||s<0||s>on||(k&&s<o.starts[k-1]))
+     ||!Array.isArray(o.titles)||!Array.isArray(o.unsure))
+    p.orig={text:p.text,starts:p.starts.slice(),titles:p.titles.slice(),unsure:p.unsure.slice()};
+  p.name=String(p.name||"Pasted text");
+  return p;
+}
+/* the speech with its markers: re-importing it gives the same split back */
+function exportText(p,T){
+  const out=[], m=p.starts.length;
+  for(let k=0;k<m;k++){
+    const a=p.starts[k], b=k+1<m?p.starts[k+1]:T.length, t=p.titles[k];
+    out.push("[SLIDE "+(k+1)+(t?": "+t:"")+"]");
+    const body=detokenize(T,a,b); if(body) out.push(body);
+    out.push("");
+  }
+  return out.join("\n");
+}
+
+/* ---- reading files: .txt and .docx -------------------------------------------------
+   .docx is a ZIP of XML. The reader takes the central directory, then inflates only
+   the entry it needs with the browser's own DecompressionStream. No libraries.
+   Sizes are capped so a hostile file can't exhaust memory.                      */
+const ZIP_MAX=64*1024*1024;
+const damaged=()=>new Error("This file is damaged, or isn't really the kind of file its name says.");
+async function zipOpen(blob){
+  const size=blob.size, tl=Math.min(size,65557);
+  if(size<22) throw damaged();
+  const tail=new DataView(await blob.slice(size-tl).arrayBuffer());
+  let e=-1; for(let p=tl-22;p>=0;p--) if(tail.getUint32(p,true)===0x06054b50){ e=p; break; }
+  if(e<0) throw damaged();
+  const count=tail.getUint16(e+10,true), cdSize=tail.getUint32(e+12,true), cdOff=tail.getUint32(e+16,true);
+  if(count===0xFFFF||cdOff===0xFFFFFFFF) throw new Error("This file is stored in a format (ZIP64) that isn't supported.");
+  if(cdOff+cdSize>size) throw damaged();
+  const cd=new DataView(await blob.slice(cdOff,cdOff+cdSize).arrayBuffer()), dec=new TextDecoder(), entries=new Map();
+  for(let n=0,p=0;n<count&&p+46<=cd.byteLength;n++){
+    if(cd.getUint32(p,true)!==0x02014b50) break;
+    const nlen=cd.getUint16(p+28,true);
+    entries.set(dec.decode(new Uint8Array(cd.buffer,cd.byteOffset+p+46,nlen)),
+      {method:cd.getUint16(p+10,true),csize:cd.getUint32(p+20,true),usize:cd.getUint32(p+24,true),off:cd.getUint32(p+42,true)});
+    p+=46+nlen+cd.getUint16(p+30,true)+cd.getUint16(p+32,true);
+  }
+  return {
+    has:n=>entries.has(n),
+    async bytes(n){
+      const x=entries.get(n); if(!x) throw damaged();
+      if(x.usize>ZIP_MAX||x.csize>ZIP_MAX) throw new Error("Part of this file is too large to open.");
+      const h=new DataView(await blob.slice(x.off,x.off+30).arrayBuffer());
+      if(h.byteLength<30||h.getUint32(0,true)!==0x04034b50) throw damaged();
+      const start=x.off+30+h.getUint16(26,true)+h.getUint16(28,true);
+      const raw=new Uint8Array(await blob.slice(start,start+x.csize).arrayBuffer());
+      if(x.method===0) return raw;
+      if(x.method===8) return inflateRaw(raw,ZIP_MAX);
+      throw new Error("This file uses a compression method that isn't supported.");
+    },
+    async text(n){ return new TextDecoder("utf-8").decode(await this.bytes(n)); }
+  };
+}
+async function inflateRaw(bytes,limit){
+  if(typeof DecompressionStream!=="function") throw new Error("This browser can't open .docx files. Paste the text instead, or use a current Chrome, Edge or Firefox.");
+  const r=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")).getReader();
+  const chunks=[]; let n=0;
+  for(;;){ const {done,value}=await r.read(); if(done) break; n+=value.length;
+    if(n>limit){ try{ r.cancel(); }catch(e){} throw new Error("Part of this file is too large to open."); } chunks.push(value); }
+  const out=new Uint8Array(n); let o=0; for(const c of chunks){ out.set(c,o); o+=c.length; } return out;
+}
+function parseXML(s){
+  const d=new DOMParser().parseFromString(s,"application/xml");
+  if(d.getElementsByTagName("parsererror").length) throw damaged();
+  return d;
+}
+/* Word's document.xml, paragraph by paragraph. Deleted tracked changes, field
+   codes and text boxes are skipped; insertions are kept; mc:Fallback is Word's
+   second copy of the same content for old readers, so it is skipped too.
+   Direct bold becomes **stress**.                                            */
+const NS_W="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const NS_MC="http://schemas.openxmlformats.org/markup-compatibility/2006";
+const W_SKIP=new Set(["del","moveFrom","delText","instrText","txbxContent","drawing","pict","object","footnoteReference","endnoteReference","commentReference","pPr","rPr","sectPr"]);
+function docxText(xml){
+  const body=parseXML(xml).getElementsByTagNameNS(NS_W,"body")[0];
+  if(!body) throw damaged();
+  const out=[];
+  (function walk(node){
+    for(const c of node.children){
+      if(c.namespaceURI===NS_MC&&c.localName==="Fallback") continue;
+      if(c.namespaceURI===NS_W&&W_SKIP.has(c.localName)) continue;
+      if(c.namespaceURI===NS_W&&c.localName==="p"){ out.push(...docxPara(c)); continue; }
+      walk(c);
+    }
+  })(body);
+  return out.join("\n");
+}
+function docxPara(p){
+  const lines=[]; let runs=[];
+  const end=()=>{ lines.push(joinRuns(runs)); runs=[]; };
+  (function walk(node,bold){
+    for(const c of node.children){
+      const ln=c.localName;
+      if(c.namespaceURI===NS_MC&&ln==="Fallback") continue;
+      if(c.namespaceURI!==NS_W){ walk(c,bold); continue; }
+      if(W_SKIP.has(ln)) continue;
+      if(ln==="r") walk(c,isBold(c));
+      else if(ln==="t") runs.push({t:c.textContent,b:bold});
+      else if(ln==="tab") runs.push({t:" ",b:false});
+      else if(ln==="br"||ln==="cr") end();
+      else if(ln==="noBreakHyphen") runs.push({t:"-",b:bold});
+      else walk(c,bold);
+    }
+  })(p,false);
+  end();
+  return lines;
+}
+function isBold(r){
+  const pr=[...r.children].find(c=>c.namespaceURI===NS_W&&c.localName==="rPr");
+  const b=pr&&[...pr.children].find(c=>c.namespaceURI===NS_W&&c.localName==="b");
+  if(!b) return false;
+  const v=b.getAttributeNS(NS_W,"val"); return !(v==="0"||v==="false"||v==="off");
+}
+function joinRuns(runs){
+  let s="", cur=null;
+  const wrap=r=>{ if(!r.b||!r.t.trim()) return r.t; const m=r.t.match(/^(\s*)([\s\S]*?)(\s*)$/); return m[1]+"**"+m[2]+"**"+m[3]; };
+  for(const r of runs){ if(cur&&cur.b===r.b) cur.t+=r.t; else { if(cur) s+=wrap(cur); cur={t:r.t,b:r.b}; } }
+  if(cur) s+=wrap(cur);
+  return s;
+}
+function decodeText(bytes){
+  if(bytes[0]===0xFF&&bytes[1]===0xFE) return new TextDecoder("utf-16le").decode(bytes.subarray(2));
+  if(bytes[0]===0xFE&&bytes[1]===0xFF) return new TextDecoder("utf-16be").decode(bytes.subarray(2));
+  if(bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF) bytes=bytes.subarray(3);
+  try{ return new TextDecoder("utf-8",{fatal:true}).decode(bytes); }
+  catch(e){ return new TextDecoder("windows-1252").decode(bytes); }   // older Notepad files
+}
+async function readSpeechFile(file){
+  const name=file.name||"file";
+  if(file.size>30*1024*1024) throw new Error("That file is too large to be a speech.");
+  const h=new Uint8Array(await file.slice(0,8).arrayBuffer());
+  const is=(...b)=>b.every((x,k)=>h[k]===x);
+  if(is(0xD0,0xCF,0x11,0xE0)) throw new Error("Old Word (.doc) and PowerPoint (.ppt) files aren't supported. Save it as .docx, or copy the text and paste it.");
+  if(is(0x25,0x50,0x44,0x46)) throw new Error("PDF files aren't supported. Copy the text out of the PDF and paste it.");
+  if(is(0x7B,0x5C,0x72,0x74)) throw new Error("RTF files aren't supported. Save it as .docx or .txt, or paste the text.");
+  if(is(0x50,0x4B,0x03,0x04)){
+    const z=await zipOpen(file);
+    if(z.has("word/document.xml")) return {text:docxText(await z.text("word/document.xml")),name,source:"docx"};
+    if(z.has("ppt/presentation.xml")||/\.odp$/i.test(name)) throw new Error("That's a presentation. Importing presentations comes in a later version; for now, open your speech here and your presentation in PowerPoint or Impress.");
+    if(z.has("content.xml")) throw new Error("OpenDocument text (.odt) isn't supported yet. Save it as .docx or .txt, or paste the text.");
+    throw new Error("That file isn't a Word document.");
+  }
+  const text=decodeText(new Uint8Array(await file.arrayBuffer()));
+  if(/[\u0000-\u0008\u000E-\u001F]/.test(text.slice(0,4000))) throw new Error("That doesn't look like a text file. Open a .txt or .docx, or paste the text.");
+  return {text,name,source:"txt"};
+}
+
+/* ---- the project: the speech, its split, and where it came from ------------------ */
+let P=null, T=[], WC=[0], SNAPS=[], S=[], PLAN=0, LIMIT=300;
+let i=0, level=1, running=false, t0=0, segT0=0, splits=[], hist=[], raf=null, blanked=false;
+function refreshIndex(){ WC=wordCounts(T); SNAPS=snapPoints(T); }
+/* Kept small: the imported original is stored only once it differs from the text. */
+function slimProject(p){ return Object.assign({},p,{orig:Object.assign({},p.orig,{text:p.orig.text===p.text?null:p.orig.text})}); }
+function saveProject(){ if(P){ P.saved=Date.now(); store(K_PROJ,slimProject(P)); } }
+function setProject(p){ P=p; T=tokenize(P.text); refreshIndex(); UNDO=[]; REDO=[]; hist=[]; i=0; saveProject(); derive(); }
+function partStats(a,b){ let w=0,bt=0,st=0; for(let j=a;j<b;j++){ const k=T[j].k; if(k==="w") w++; else if(k==="b") bt++; else if(k==="s") st++; } return {w,bt,st}; }
+function firstWords(a,b,n){ const out=[]; for(let j=a;j<b&&out.length<n;j++) if(T[j].k==="w") out.push(T[j].s); return out.join(" "); }
+/* Speaking time: words at the pace setting, plus 1 s per beat and 3 s per full
+   stop. A slide with no words (title, picture) is held for the hold setting.  */
+function derive(){
+  if(!P){ S=[]; PLAN=0; LIMIT=O.limit; return; }
+  const m=P.starts.length;
+  S=P.starts.map((a,k)=>{
+    const b=k+1<m?P.starts[k+1]:T.length, st=partStats(a,b), title=P.titles[k]||"";
+    return {n:k+1,title,label:title||"Slide "+(k+1),from:a,to:b,words:st.w,
+      est:st.w?st.w/O.wpm*60+st.bt+3*st.st:O.hold,note:"",
+      cue:title||(st.w?firstWords(a,b,3)+"…":"Slide "+(k+1))};
+  });
+  const tot=S.reduce((a,x)=>a+x.est,0)||1, f=O.stretch?O.limit/tot:1;
+  S.forEach(x=>{ x.target=Math.max(1,Math.round(x.est*f)); });
+  PLAN=S.reduce((a,x)=>a+x.target,0); LIMIT=O.limit;
+  if(i>=S.length) i=0;
+}
+
+/* ---- rehearsal view ------------------------------------------------------------ */
+function renderScript(box,a,b){
+  box.textContent="";
+  let p=null, strong=null;
+  for(let j=a;j<b;j++){
+    const t=T[j];
+    if(!p||t.p){ p=el("p"); box.appendChild(p); strong=null; }
+    const gap=p.childNodes.length?" ":"";
+    if(t.k==="w"){
+      if(t.st){ if(strong) strong.textContent+=" "+t.s; else { if(gap) p.appendChild(txt(gap)); strong=el("strong",null,t.s); p.appendChild(strong); } }
+      else { strong=null; p.appendChild(txt(gap+t.s)); }
+    } else {
+      strong=null;
+      if(t.k==="d"){ if(gap) p.appendChild(txt(gap)); p.appendChild(el("em","do",t.s)); }
+      else { const e=el("i",t.k==="b"?"beat":"stop"); e.title=t.k==="b"?"beat, about 1 second":"full stop, about 3 seconds"; p.appendChild(e); }
+    }
+  }
+  if(a===b) box.appendChild(el("p","empty","No words on this slide."));
+}
+/* Keywords view: an automatic outline, one line per sentence: its first few
+   words, then any stressed words after them. No model involved.            */
+function renderOutline(box,a,b){
+  box.textContent="";
+  let line=null, n=0, more=false, extra=[], lastSt=-2;
+  const finish=()=>{ if(!line) return; if(more) line.appendChild(txt(" …"));
+    extra.forEach(s=>{ line.appendChild(txt(" · ")); line.appendChild(el("strong",null,s)); }); line=null; };
+  for(let j=a;j<b;j++){
+    const t=T[j]; if(t.k!=="w") continue;
+    if(t.ss||!line){ finish(); line=el("div","kline"+(t.p&&j!==a?" kpara":"")); box.appendChild(line); n=0; more=false; extra=[]; lastSt=-2; }
+    if(n<4){ if(n) line.appendChild(txt(" ")); line.appendChild(t.st?el("strong",null,t.s):txt(t.s)); }
+    else { more=true; if(t.st){ if(lastSt===j-1&&extra.length) extra[extra.length-1]+=" "+t.s; else extra.push(t.s); lastSt=j; } }
+    n++;
+  }
+  finish();
+  if(a===b) box.appendChild(el("div","kline","(no words on this slide)"));
+}
+function ribbon(){
+  $("track").textContent=""; $("ghosts").textContent="";
+  S.forEach(x=>{
+    const d=el("div","seg"); d.style.flexGrow=x.target;
+    d.appendChild(el("div","fill")); d.appendChild(el("span",null,String(x.n)));
+    d.title='Jump to slide '+x.n+' — available when the clock is stopped';
+    d.onclick=()=>{ if(running){echo('jump','stop the clock first');return;}
+      if(editing) toggleEdit(); i=S.indexOf(x); render(); };
+    $("track").appendChild(d);
+    const g=el("div","gh"); g.style.flexGrow=x.target;
+    $("ghosts").appendChild(g);
+  });
+}
+function paint(inSeg){
+  const segs=$("track").children;
+  for(let k=0;k<S.length&&k<segs.length;k++){
+    const e=segs[k], f=e.querySelector(".fill"); e.className="seg";
+    if(k<i){ e.classList.add("done");
+      if((splits[k]??S[k].target)>S[k].target*1.12) e.classList.add("over");
+      f.style.width="100%";
+    } else if(k===i&&running){ e.classList.add("now");
+      if(inSeg>S[k].target) e.classList.add("over");
+      f.style.width=Math.min(100,inSeg/S[k].target*100)+"%";
+    } else f.style.width="0%";
+  }
+}
+function ghosts(){
+  const g=$("ghosts").children;
+  for(let k=0;k<g.length;k++) g[k].textContent="";
+  hist.slice(-2).forEach(run=>run.forEach((a,k)=>{
+    if(k>=S.length||k>=g.length)return; const b=el("i");
+    b.style.width=Math.min(100,a/S[k].target*100)+"%";
+    if(a>S[k].target*1.12) b.classList.add("over"); g[k].appendChild(b);
+  }));
+}
+function render(){
+  if(!S.length) return;
+  const x=S[i];
+  $("slideNo").textContent="SLIDE "+x.n+" / "+S.length;
+  $("label").textContent=x.label; $("note").textContent=x.note; $("note").hidden=!x.note;
+  $("segTarget").textContent=mmss(x.target);
+  const b=$("body");
+  if(level===1){ b.className="script"; renderScript(b,x.from,x.to); }
+  else if(level===2){ b.className="keys"; renderOutline(b,x.from,x.to); }
+  else { b.className="cueonly"; b.textContent=x.cue; }
+  const n=S[i+1];
+  $("nextLab").textContent = n ? "next → slide "+n.n+", "+n.label : "last slide";
+  $("nextBtn").textContent = n ? "Next slide" : "Finish";
+  document.querySelector("main").scrollTop=0; paint(0); pushSlide(false);
+}
+function tick(){
+  const now=performance.now(), total=(now-t0)/1000, inSeg=(now-segT0)/1000;
+  $("clock").textContent=mmss(total);
+  $("clock").classList.toggle("over",total>LIMIT);
+  const plan=S.slice(0,i).reduce((a,x)=>a+x.target,0)+Math.min(inSeg,S[i].target);
+  const d=total-plan, e=$("delta");
+  e.textContent=Math.abs(d)<1.5?"on plan":sgn(d);
+  e.className="delta "+(Math.abs(d)<1.5?"flat":d>0?"behind":"ahead");
+  paint(inSeg); raf=requestAnimationFrame(tick);
+}
+function start(){ if(running)return; if(!S.length){ openSetup(); return; }
+  if(editing) toggleEdit();
+  running=true; t0=performance.now(); segT0=t0; splits=[];
+  $("go").textContent="Running"; $("go").disabled=true; wakeOn(); raf=requestAnimationFrame(tick); }
+function next(){
+  if(!S.length) return;
+  if(editing) toggleEdit();
+  if(!running){ start(); return; }
+  const now=performance.now(); splits.push((now-segT0)/1000); segT0=now;
+  if(i<S.length-1){ i++; render(); } else finish();
+}
+function back(){
+  if(i===0||!S.length) return;
+  if(editing) toggleEdit();
+  if(running){ const p=splits.pop()||0; segT0-=p*1000; }
+  i--; render();
+}
+function rich(box,parts){ box.textContent=""; parts.forEach(p=>box.appendChild(typeof p==="string"?txt(p):el(p[0],null,p[1]))); }
+function finish(){
+  running=false; cancelAnimationFrame(raf); wakeOff();
+  const total=splits.reduce((a,b)=>a+b,0);
+  hist.push(splits.slice()); ghosts();
+  $("runTot").textContent="total "+mmss(total)+"  ·  plan "+mmss(PLAN)+"  ·  "+
+    (total>LIMIT?"over by "+Math.round(total-LIMIT)+"s":"under by "+Math.round(LIMIT-total)+"s");
+  const rows=$("rows"); rows.textContent="";
+  S.forEach((x,k)=>{ const a=splits[k]||0,d=a-x.target, c=Math.abs(d)<3?"":(d>0?"behind":"ahead");
+    const tr=el("tr");
+    tr.append(el("td","n",x.n+" · "+x.label),el("td",null,mmss(x.target)),el("td",null,mmss(a)),el("td","d "+c,sgn(d)));
+    rows.appendChild(tr); });
+  const w=S.map((x,k)=>({x,d:(splits[k]||0)-x.target})).sort((a,b)=>b.d-a.d)[0];
+  const v=$("verdict");
+  if(total>LIMIT&&PLAN>LIMIT){ v.className="verdict bad";
+    rich(v,["Over the limit, and so is the plan itself (",["b",mmss(PLAN)],"). Cut words in the split editor before cutting speed."]); }
+  else if(total>LIMIT){ v.className="verdict bad";
+    rich(v,["Over the limit. Your worst overrun was ",["b","slide "+w.x.n+" — "+w.x.label],", by "+Math.round(w.d)+
+      "s. Cut there first; trimming slides that already run on plan just makes them feel rushed."]); }
+  else if(total<PLAN*0.85){ v.className="verdict bad";
+    rich(v,["Well under your plan of ",["b",mmss(PLAN)],". That is usually racing, not efficiency. Check you held the pauses."]); }
+  else { v.className="verdict";
+    rich(v,["Inside the limit with room to breathe. Run it again at ",["b","Keywords"],", then ",["b","Cue only"],
+      ". When you hold this time on cue only, you know it."]); }
+  $("sheet").classList.add("on"); $("go").textContent="Start"; $("go").disabled=false;
+}
+function reset(){ running=false; cancelAnimationFrame(raf); wakeOff(); i=0; splits=[];
+  if(editing) toggleEdit();
+  $("clock").textContent="0:00"; $("clock").classList.remove("over");
+  $("delta").textContent="—"; $("delta").className="delta flat";
+  $("go").textContent="Start"; $("go").disabled=false;
+  $("sheet").classList.remove("on"); render(); }
+function setLevel(n){ if(editing) toggleEdit(); level=n; [1,2,3].forEach(k=>$("L"+k).setAttribute("aria-pressed",String(k===n))); render(); }
+function blank(){ blanked=!blanked;
+  if(live){ pushBlank(); }                                  // blank the real show
+  else { $("blank").classList.toggle("on",blanked); }       // or just this screen
+}
+
+function echo(key,action){
+  const e=$("echo");
+  e.textContent = action ? key+"  →  "+action : key+"  →  not mapped";
+  e.className = "echo "+(action?"hit":"miss");
+}
+$("liveBtn").onclick=()=>{ if((!TOKEN||tokenBad) && !live) askToken(); else liveToggle(); };   // a rejected token is asked for again
+$("go").onclick=start; $("nextBtn").onclick=next; $("reset").onclick=reset;
+$("again").onclick=reset; $("closeSheet").onclick=()=>$("sheet").classList.remove("on");
+[1,2,3].forEach(k=>$("L"+k).onclick=()=>setLevel(k));
+$("setupBtn").onclick=()=>{ if(!running) openSetup(); else echo("speech","stop the clock first"); };
+$("splitBtn").onclick=()=>{ if(!P) openSetup(); else if(!running) openEditor(); else echo("split","stop the clock first"); };
+
+/* Logitech presenters enumerate as HID keyboards: next=PageDown, prev=PageUp,
+   start=F5, stop=Esc, blank=b or period. Arrows and space cover other models.
+   The setup screen and split editor have their own keys: while either is open,
+   the clicker must not advance slides behind it.                            */
+addEventListener("keydown",ev=>{
+  if(setupOpen||editorOpen) return;
+  const k=ev.key, tg=ev.target;
+  if(editing){ if(k==="Escape"){ev.preventDefault();toggleEdit();} return; }
+  if(tg&&(tg.tagName==="TEXTAREA"||(tg.tagName==="INPUT"&&/^(text|number)$/.test(tg.type)))) return;
+  if(!S.length) return;
+  if(k==="e"||k==="E"){ev.preventDefault();toggleEdit();return;}
+  if(blanked && k!=="b" && k!=="B" && k!=="." && k!=="Escape") return;
+  if(k==="PageDown"){ev.preventDefault();echo("Page Down","next slide");next();}
+  else if(k==="PageUp"){ev.preventDefault();echo("Page Up","previous slide");back();}
+  else if(k===" "||k==="ArrowRight"){ev.preventDefault();echo(k===" "?"Space":"Right","next slide");next();}
+  else if(k==="ArrowLeft"){ev.preventDefault();echo("Left","previous slide");back();}
+  else if(k==="F5"){ev.preventDefault();echo("F5","start");start();}
+  else if(k==="Escape"){ev.preventDefault();
+    if(blanked){echo("Esc","unblank");blank();}
+    else if(running){echo("Esc","ignored mid-run — press R to reset");}
+    else {echo("Esc","reset");reset();}}
+  else if(k==="b"||k==="B"||k==="."){ev.preventDefault();echo(k,"blank screen");blank();}
+  else if(k==="1"||k==="2"||k==="3"){echo(k,"detail level");setLevel(+k);}   // not "123".includes(k): that is true for ""
+  else if(k===","){ev.preventDefault();echo(",","options");optsToggle();}
+  else if(k==="+"||k==="="){ev.preventDefault();optSet("z",Math.min(180,O.z+5));}
+  else if(k==="-"){ev.preventDefault();optSet("z",Math.max(70,O.z-5));}
+  else if(k.length===1||k.startsWith("F")){echo(k,null);}
+},{capture:true});
+
+/* ---- options ---------------------------------------------------------------
+   Persisted with localStorage inside a try/catch: it works when this file is
+   opened from disk, and quietly does nothing in sandboxes that block it.     */
+const FONTS={
+  sans :'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif',
+  wide :'Verdana,Tahoma,Geneva,sans-serif',
+  serif:'Georgia,"Times New Roman",serif',
+  mono :'ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace'
+};
+const DEF={theme:"dark",font:"sans",z:100,lh:158,mw:62,ribbon:true,note:true,cues:true,
+  limit:300,wpm:140,hold:3,stretch:false};
+const TIMING=["limit","wpm","hold","stretch"];
+let O=Object.assign({},DEF);
+const clamp=(v,lo,hi,d)=>{ v=Number(v); return Number.isFinite(v)?Math.min(hi,Math.max(lo,v)):d; };
+function optLoad(){
+  const s=load(K_OPTS);
+  if(s&&typeof s==="object") O=Object.assign({},DEF,s);
+  O.limit=clamp(O.limit,10,7200,300); O.wpm=clamp(O.wpm,60,260,140); O.hold=clamp(O.hold,0,60,3); O.stretch=!!O.stretch;
+}
+function optSave(){ store(K_OPTS,O); }
+function optApply(){
+  const r=document.documentElement;
+  r.setAttribute("data-theme",O.theme);
+  r.style.setProperty("--read",FONTS[O.font]||FONTS.sans);
+  r.style.setProperty("--z",(O.z/100).toFixed(2));
+  r.style.setProperty("--lh",(O.lh/100).toFixed(2));
+  r.style.setProperty("--measure",O.mw+"ch");
+  document.body.classList.toggle("hide-ribbon",!O.ribbon);
+  document.body.classList.toggle("hide-note",!O.note);
+  document.body.classList.toggle("hide-cues",!O.cues);
+  $("zVal").textContent=O.z+"%"; $("lhVal").textContent=(O.lh/100).toFixed(2);
+  $("mwVal").textContent=O.mw;
+  $("zRange").value=O.z; $("lhRange").value=O.lh; $("mwRange").value=O.mw;
+  $("fontSel").value=O.font;
+  $("cRibbon").checked=O.ribbon; $("cNote").checked=O.note; $("cCues").checked=O.cues;
+  [...$("themeSeg").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===O.theme)));
+  $("limitIn").value=mmss(O.limit); $("wpmIn").value=O.wpm; $("holdIn").value=O.hold; $("cStretch").checked=O.stretch;
+}
+function optSet(k,v){ O[k]=v; optApply(); optSave(); if(TIMING.includes(k)) onTiming(); }
+function optsToggle(){ $("opts").classList.toggle("on"); }
+function parseLimit(s){ const m=String(s).match(/^\s*(\d{1,3})(?:\s*:\s*(\d{1,2}))?\s*$/); if(!m) return null;
+  const v=m[2]!==undefined?(+m[1])*60+(+m[2]):(+m[1])*60; return v>=10&&v<=7200?v:null; }
+function onTiming(){
+  derive(); refreshPlan();
+  if(!running){ ribbon(); paint(0); if(S.length) $("segTarget").textContent=mmss(S[i].target); }
+  if(editorOpen) renderEditor();
+}
+function refreshPlan(){
+  $("planTotal").textContent=S.length?"plan "+mmss(PLAN):"";
+  $("limitLab").textContent=mmss(LIMIT)+" limit";
+  recount();
+}
+
+[...$("themeSeg").children].forEach(b=>b.onclick=()=>optSet("theme",b.dataset.v));
+$("fontSel").onchange =e=>optSet("font",e.target.value);
+$("zRange").oninput   =e=>optSet("z",+e.target.value);
+$("lhRange").oninput  =e=>optSet("lh",+e.target.value);
+$("mwRange").oninput  =e=>optSet("mw",+e.target.value);
+$("cRibbon").onchange =e=>optSet("ribbon",e.target.checked);
+$("cNote").onchange   =e=>optSet("note",e.target.checked);
+$("cCues").onchange   =e=>optSet("cues",e.target.checked);
+$("limitIn").onchange =e=>{ const v=parseLimit(e.target.value); if(v==null){ e.target.value=mmss(O.limit); echo("time limit","use minutes, like 5 or 5:30"); } else optSet("limit",v); };
+$("wpmIn").onchange   =e=>optSet("wpm",clamp(e.target.value,60,260,O.wpm));
+$("holdIn").onchange  =e=>optSet("hold",clamp(e.target.value,0,60,O.hold));
+$("cStretch").onchange=e=>optSet("stretch",e.target.checked);
+$("optsBtn").onclick  =optsToggle;
+$("optsClose").onclick=optsToggle;
+$("optsReset").onclick=()=>{ O=Object.assign({},DEF); optApply(); optSave(); onTiming(); };
+
+/* ---- edit text in place --------------------------------------------------------
+   Rewriting a line into your own words is the single best thing you can do for
+   recall. Editing one slide replaces only that slide's part of the speech, so
+   every other slide boundary stays exactly where it was.                     */
+let editing=false;
+function toggleEdit(){
+  if(!P||!S.length) return;
+  if(!editing&&level!==1){ echo("edit","switch to Full script first"); return; }
+  if(!editing&&running){ echo("edit","stop the clock first"); return; }
+  editing=!editing;
+  $("editBtn").setAttribute("aria-pressed",String(editing));
+  $("editBar").classList.toggle("on",editing);
+  const b=$("body");
+  if(editing){
+    const x=S[i], ta=el("textarea","editbox"); ta.id="editArea"; ta.spellcheck=true;
+    ta.value=detokenize(T,x.from,x.to);
+    const fit=()=>{ ta.style.height="auto"; ta.style.height=(ta.scrollHeight+4)+"px"; };
+    ta.addEventListener("input",fit);
+    b.textContent=""; b.appendChild(ta); fit(); ta.focus();
+  } else {
+    const ta=$("editArea"); if(ta) applyEdit(ta.value);
+    render();
+  }
+}
+function applyEdit(value){
+  const x=S[i], lines=String(value).replace(/\r\n?/g,"\n").split("\n");
+  const nt=tokenize(toParas(lines,"lines").join("\n"));
+  if(detokenize(nt)===detokenize(T,x.from,x.to)) return;
+  if(nt.length&&x.to>x.from&&!T[x.from].p) nt[0].p=false;    // a part that began mid-paragraph still does
+  const delta=nt.length-(x.to-x.from);
+  T.splice(x.from,x.to-x.from,...nt);
+  for(let k=i+1;k<P.starts.length;k++) P.starts[k]+=delta;
+  markSentences(T); refreshIndex();
+  P.text=detokenize(T); UNDO=[]; REDO=[]; hist=[];
+  saveProject(); derive(); ribbon(); refreshPlan();
+}
+
+/* ---- the whole speech: count, copy, save, restore ------------------------------ */
+function recount(){
+  const w=$("wcount"); w.textContent="";
+  if(!P){ w.textContent="No speech yet."; return; }
+  const words=WC[T.length]||0, est=S.reduce((a,x)=>a+x.est,0);
+  rich(w,[["b",String(words)]," words · about ",["b",mmss(est)]," at "+O.wpm+" words a minute · "+plural(S.length,"slide")]);
+}
+function copyText(t,btn,label){
+  const done=()=>{ btn.textContent="Copied ✓"; setTimeout(()=>btn.textContent=label,1600); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done,()=>fallback(t,done));
+  } else fallback(t,done);
+}
+function copyAll(){ if(P) copyText(exportText(P,T),$("copyAll"),"Copy full speech"); }
+/* The old version saved rewritten slides as HTML under hashing.text, which is now
+   speech-rehearsal.old-edits. DOMParser builds an inert document (no scripts run,
+   no images load), and only the text comes out, with the markup made plain again. */
+function oldEditsText(v){
+  if(!v||typeof v!=="object") return "";
+  const out=[];
+  Object.keys(v).filter(k=>/^\d+$/.test(k)).sort((a,b)=>a-b).forEach(n=>{
+    const html=v[n]&&typeof v[n].full==="string"?v[n].full:""; if(!html) return;
+    const d=new DOMParser().parseFromString(html,"text/html").body;
+    d.querySelectorAll("i.beat").forEach(e=>e.replaceWith(" // "));
+    d.querySelectorAll("i.stop").forEach(e=>e.replaceWith(" /// "));
+    d.querySelectorAll("em.do").forEach(e=>e.replaceWith(" [["+e.textContent.replace(/^[▶●]\s*/,"").trim()+"]] "));
+    d.querySelectorAll("strong").forEach(e=>e.replaceWith("**"+e.textContent+"**"));
+    let paras=[...d.querySelectorAll("p,div")].filter(e=>!e.querySelector("p,div")).map(e=>e.textContent.replace(/\s+/g," ").trim()).filter(Boolean);
+    if(!paras.length){ const t=d.textContent.replace(/\s+/g," ").trim(); if(t) paras=[t]; }
+    if(paras.length) out.push("[SLIDE "+n+"]",...paras,"");
+  });
+  return out.join("\n");
+}
+function fallback(t,done){
+  const a=document.createElement("textarea");
+  a.value=t; a.style.position="fixed"; a.style.opacity="0";
+  document.body.appendChild(a); a.select();
+  try{ document.execCommand("copy"); done(); }catch(e){ echo("copy failed","select the text manually"); }
+  a.remove();
+}
+function saveTxt(){
+  if(!P) return;
+  const url=URL.createObjectURL(new Blob([exportText(P,T)],{type:"text/plain;charset=utf-8"}));
+  const a=el("a"); a.href=url; a.download=P.name.replace(/\.[^.]+$/,"")+" - with slide markers.txt";
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+$("editBtn").onclick=toggleEdit;
+$("copyAll").onclick=copyAll;
+$("oldEdits").onclick=()=>copyText(oldEditsText(load(K_OLDEDITS)),$("oldEdits"),"Copy my edits from the old version");
+$("dlTxt").onclick=saveTxt;
+$("restoreTxt").onclick=()=>{
+  if(!P) return;
+  if(!confirm("Go back to the speech and split as first imported? Your text edits and split fixes will be lost.")) return;
+  if(editing) toggleEdit();
+  const o=P.orig; P.text=o.text; P.starts=o.starts.slice(); P.titles=o.titles.slice(); P.unsure=o.unsure.slice(); P.adjusted=false;
+  setProject(P); ribbon(); reset(); refreshPlan();
+};
+
+/* ---- setup: where the speech comes from ------------------------------------------ */
+let setupOpen=false, setupMeta={name:"Pasted text",source:"paste"}, detectTimer=null;
+function openSetup(){
+  if(editing) toggleEdit();
+  if(editorOpen) closeEditor();
+  setupOpen=true; $("setup").classList.add("on");
+  $("resume").hidden=!P; $("setupCancel").hidden=!P;
+  if(P){ $("resumeName").textContent=P.name;
+    $("resumeInfo").textContent=plural(P.starts.length,"slide")+" · plan "+mmss(PLAN)+" · limit "+mmss(LIMIT); }
+  setupErr(""); detect();
+  setTimeout(()=>{ (P?$("resumeGo"):$("pasteBox")).focus(); },30);
+}
+function closeSetup(){ setupOpen=false; $("setup").classList.remove("on"); }
+function setupErr(m){ $("setupErr").textContent=m; $("setupErr").hidden=!m; }
+function detect(){
+  const t=$("pasteBox").value, box=$("detect");
+  box.textContent=""; $("splitGo").disabled=!t.trim();
+  if(!t.trim()){ $("countRow").hidden=true; return; }
+  const mk=splitMarkers(t);
+  const spoken=mk.pre.concat(...mk.segs.map(s=>s.lines)).join("\n");     // marker lines aren't spoken
+  const words=spoken.replace(/\[\[[\s\S]*?\]\]/g," ").split(/\s+/).filter(w=>/[\p{L}\p{N}]/u.test(w)).length;
+  const parts=[plural(words,"word")+" · about "+mmss(words/O.wpm*60)+" at "+O.wpm+" words a minute. "];
+  if(mk.segs.length) parts.push(["b","Found "+plural(mk.segs.length,"slide marker")+"."]);
+  else parts.push("No slide markers found.");
+  rich(box,parts);
+  $("countRow").hidden=!!mk.segs.length;
+  if(!mk.segs.length&&!$("countIn").value) $("countIn").value=P?P.starts.length:Math.max(1,Math.min(40,Math.round(words/110)));
+}
+async function takeFile(f){
+  setupErr("");
+  try{ const r=await readSpeechFile(f); $("pasteBox").value=r.text; setupMeta={name:r.name,source:r.source}; $("fileName").textContent=r.name; detect(); }
+  catch(e){ setupErr(e&&e.message||String(e)); }
+}
+function doSplit(){
+  const t=$("pasteBox").value; if(!t.trim()) return;
+  if(P&&!confirm("Replace your current speech and its split with this one?")) return;
+  let p; try{ p=newProject(t,setupMeta,+$("countIn").value); }catch(e){ setupErr(e.message); return; }
+  setProject(p); ribbon(); refreshPlan(); closeSetup(); openEditor();
+}
+$("pasteBox").addEventListener("input",()=>{ clearTimeout(detectTimer); detectTimer=setTimeout(detect,250); });
+$("pasteBox").addEventListener("paste",()=>{ setupMeta={name:"Pasted text",source:"paste"}; $("fileName").textContent=""; });
+$("openFile").onclick=()=>$("fileIn").click();
+$("fileIn").onchange=e=>{ const f=e.target.files[0]; if(f) takeFile(f); e.target.value=""; };
+$("sampleBtn").onclick=()=>{ $("pasteBox").value=SAMPLE; setupMeta={name:"Sample speech",source:"sample"}; $("fileName").textContent=""; setupErr(""); detect(); };
+$("splitGo").onclick=doSplit;
+$("setupCancel").onclick=closeSetup;
+$("resumeGo").onclick=()=>{ closeSetup(); reset(); };
+$("resumeEdit").onclick=()=>{ closeSetup(); openEditor(); };
+$("setup").addEventListener("keydown",e=>{ if(e.key==="Escape"&&P){ e.preventDefault(); closeSetup(); } });
+/* A file dropped anywhere must never replace this page: the browser's default is
+   to navigate to it. Over the setup screen, a drop opens it as the speech.   */
+addEventListener("dragover",e=>{ e.preventDefault(); if(setupOpen) $("setupPanel").classList.add("drop"); });
+addEventListener("dragleave",e=>{ if(!e.relatedTarget) $("setupPanel").classList.remove("drop"); });
+addEventListener("drop",e=>{ e.preventDefault(); $("setupPanel").classList.remove("drop");
+  const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(f&&setupOpen) takeFile(f); });
+
+/* ---- split editor -------------------------------------------------------------------
+   The whole speech, each slide's words in its own colour, a labelled line where
+   each slide starts. Drag a line and it snaps to the nearest sentence start;
+   click a word and the nearest line moves exactly there. Ctrl+Z undoes.       */
+let editorOpen=false, UNDO=[], REDO=[], drag=null, marks=[], wordEls=[], hoverI=-1, checkAt=0;
+const HINT="Drag a slide line to move it; it snaps to the nearest sentence. Click a word to start a slide exactly there. A selected line moves with the arrow keys (Shift: one word).";
+function openEditor(){
+  if(!P) return;
+  if(editing) toggleEdit();
+  editorOpen=true; $("editor").classList.add("on");
+  renderEditor(); $("eScroll").scrollTop=0;
+}
+function closeEditor(){
+  endDrag(); editorOpen=false; $("editor").classList.remove("on"); clearMarks();
+  derive(); ribbon(); reset(); refreshPlan();
+}
+function renderEditor(){
+  derive();
+  const box=$("eText"); box.textContent=""; wordEls=[]; marks=[]; hoverI=-1;
+  S.forEach((x,k)=>{
+    box.appendChild(cutLine(k,x));
+    const part=el("div","part c"+(k%8)); let p=null;
+    for(let j=x.from;j<x.to;j++){
+      const t=T[j];
+      if(!p||t.p){ p=el("p",!t.p&&j===x.from?"cont":null); part.appendChild(p); }
+      else p.appendChild(txt(" "));
+      if(t.k==="w"){ const s=el("span","w"+(t.st?" st":""),t.s); s.dataset.i=j; wordEls[j]=s; p.appendChild(s); }
+      else if(t.k==="d") p.appendChild(el("em","do",t.s));
+      else p.appendChild(el("span",t.k==="b"?"pb":"ps",t.k==="b"?"//":"///"));
+    }
+    box.appendChild(part);
+  });
+  eSummary();
+  $("eHint").textContent=HINT;
+}
+function cutLine(k,x){
+  const d=el("div","cut c"+(k%8)+(P.unsure[k]?" unsure":"")+(k===0?" first":"")); d.dataset.k=k;
+  if(k>0){ d.tabIndex=0; d.title="Drag, or select and use the arrow keys"; d.setAttribute("aria-label","Start of slide "+x.n); }
+  const lab=el("span","clab"); lab.appendChild(el("b",null,"Slide "+x.n));
+  if(x.title) lab.appendChild(txt(" · "+x.title));
+  lab.appendChild(txt(" · "+mmss(x.est)));
+  if(!x.words) lab.appendChild(el("span","cnote"," · no words"));
+  d.appendChild(lab);
+  if(P.unsure[k]){ const c=el("button","ccheck","check"); c.dataset.k=k; c.title="This boundary is a guess. Move it, or click here if it is right."; d.appendChild(c); }
+  const r=el("button","cren","✎"); r.dataset.k=k; r.title="Rename slide "+x.n; r.setAttribute("aria-label","Rename slide "+x.n); d.appendChild(r);
+  return d;
+}
+function eSummary(){
+  $("eMethod").textContent=P.method==="markers"?"Split by slide markers":"Cut into equal parts";
+  $("eAdj").textContent=P.adjusted?"· adjusted by hand":"";
+  const tot=S.reduce((a,x)=>a+x.est,0), t=$("eTotal");
+  t.textContent=mmss(tot)+" of "+mmss(O.limit); t.classList.toggle("over",tot>O.limit);
+  t.title="Speaking time at "+O.wpm+" words a minute, against your time limit";
+  const n=P.unsure.filter(Boolean).length, c=$("eCheck"); c.hidden=!n; c.textContent=n+" to check ›";
+  $("eUndo").disabled=!UNDO.length; $("eRedo").disabled=!REDO.length;
+  const list=$("eMsgList"); list.textContent=""; P.msgs.forEach(s=>list.appendChild(el("div",null,s)));
+  $("eMsgs").hidden=!P.msgs.length;
+}
+function snapshot(){ return {starts:P.starts.slice(),unsure:P.unsure.slice(),titles:P.titles.slice(),adjusted:P.adjusted}; }
+function pushUndo(){ UNDO.push(snapshot()); if(UNDO.length>300) UNDO.shift(); REDO=[]; }
+function restoreSnap(s){ P.starts=s.starts; P.unsure=s.unsure; P.titles=s.titles; P.adjusted=s.adjusted; saveProject(); renderEditor(); }
+function undo(){ if(!UNDO.length) return; REDO.push(snapshot()); restoreSnap(UNDO.pop()); }
+function redo(){ if(!REDO.length) return; UNDO.push(snapshot()); restoreSnap(REDO.pop()); }
+function slideOf(starts,j){ let k=0; for(let q=1;q<starts.length;q++) if(starts[q]<=j) k=q; return k; }
+/* Which line a click on token j moves: whichever boundary of j's slide is fewer
+   words away. Ties go forward: "the next slide starts here".                */
+function nearestBoundary(starts,wc,j){
+  const k=slideOf(starts,j), m=starts.length;
+  if(starts[k]===j) return null;
+  const back=k>0?wc[j]-wc[starts[k]]:Infinity, fwd=k+1<m?wc[starts[k+1]]-wc[j]:Infinity;
+  if(back===Infinity&&fwd===Infinity) return null;
+  return fwd<=back?k+1:k;
+}
+/* Where a dragged line lands: the sentence start nearest token j, never past
+   the lines either side of it (reaching one leaves that slide with no words). */
+function snapNear(starts,snaps,wc,j,b,len){
+  const lo=starts[b-1], hi=b+1<starts.length?starts[b+1]:len;
+  let best=lo, bd=Math.abs(wc[lo]-wc[j]);
+  for(const q of snaps){ if(q<=lo||q>=hi) continue; const d=Math.abs(wc[q]-wc[j]); if(d<bd){ best=q; bd=d; } }
+  if(Math.abs(wc[hi]-wc[j])<bd) best=hi;
+  return best;
+}
+function stepBoundary(b,dir,byWord){
+  const cur=P.starts[b], lo=P.starts[b-1], hi=b+1<P.starts.length?P.starts[b+1]:T.length;
+  if(byWord){ let j=cur+dir; while(j>lo&&j<hi&&T[j].k!=="w") j+=dir; return Math.max(lo,Math.min(hi,j)); }
+  if(dir>0){ for(const q of SNAPS) if(q>cur&&q<hi) return q; return hi; }
+  let best=lo; for(const q of SNAPS){ if(q>=cur) break; if(q>lo) best=q; } return best;
+}
+function moveBoundary(b,to){
+  const lo=P.starts[b-1], hi=b+1<P.starts.length?P.starts[b+1]:T.length;
+  to=Math.max(lo,Math.min(hi,to));
+  if(to===P.starts[b]) return false;
+  pushUndo(); P.starts[b]=to; P.unsure[b]=false; P.adjusted=true;
+  saveProject(); renderEditor(); return true;
+}
+function focusCut(b){ const c=$("eText").querySelector('.cut[data-k="'+b+'"]'); if(c){ c.focus({preventScroll:true}); c.scrollIntoView({block:"nearest"}); } }
+function clearMarks(){ marks.forEach(e=>e.classList.remove("cuthere","mv","willmove")); marks=[]; }
+function snippet(j){ const w=firstWords(j,T.length,5); return w.length>40?w.slice(0,40)+"…":w; }
+function preview(b,to){
+  clearMarks();
+  const cur=P.starts[b];
+  if(to===cur){ $("eHint").textContent=HINT; return; }
+  for(let q=Math.min(cur,to);q<Math.max(cur,to);q++){ const w=wordEls[q]; if(w){ w.classList.add("mv"); marks.push(w); } }
+  let f=to; while(f<T.length&&T[f].k!=="w") f++;
+  if(wordEls[f]){ wordEls[f].classList.add("cuthere"); marks.push(wordEls[f]); }
+  const c=$("eText").querySelector('.cut[data-k="'+b+'"]'); if(c){ c.classList.add("willmove"); marks.push(c); }
+  const hi=b+1<P.starts.length?P.starts[b+1]:T.length;
+  $("eHint").textContent=to>=hi&&to>cur ? "Slide "+(b+1)+" will have no words." :
+    "Slide "+(b+1)+" will start at “"+snippet(to)+"”.";
+}
+function wordAt(x,y){
+  const e=document.elementFromPoint(x,y);
+  if(e&&e.classList&&e.classList.contains("w")) return +e.dataset.i;
+  let node=null, off=0;
+  if(document.caretPositionFromPoint){ const c=document.caretPositionFromPoint(x,y); if(c){ node=c.offsetNode; off=c.offset; } }
+  else if(document.caretRangeFromPoint){ const r=document.caretRangeFromPoint(x,y); if(r){ node=r.startContainer; off=r.startOffset; } }
+  if(!node||!$("eText").contains(node)) return null;
+  const pe=node.nodeType===3?node.parentNode:node;
+  if(pe.classList&&pe.classList.contains("w")) return +pe.dataset.i;
+  let s=node.nodeType===3?node.nextSibling:node.childNodes[off]||null;
+  while(s&&!(s.classList&&s.classList.contains("w"))) s=s.nextSibling;
+  return s?+s.dataset.i:null;
+}
+function onDragMove(ev){
+  if(!drag) return;
+  const sc=$("eScroll"), r=sc.getBoundingClientRect();
+  if(ev.clientY<r.top+40) sc.scrollTop-=16; else if(ev.clientY>r.bottom-40) sc.scrollTop+=16;
+  const j=wordAt(ev.clientX,ev.clientY); if(j==null) return;
+  const to=snapNear(P.starts,SNAPS,WC,j,drag.b,T.length);
+  if(to!==drag.to){ drag.to=to; preview(drag.b,to); }
+}
+function onDragEnd(){ if(!drag) return; const d=drag; endDrag(); if(!moveBoundary(d.b,d.to)) renderEditor(); }
+function endDrag(){
+  removeEventListener("pointermove",onDragMove); removeEventListener("pointerup",onDragEnd); removeEventListener("pointercancel",endDrag);
+  if(drag) drag.cut.classList.remove("dragging");
+  document.body.classList.remove("dragmode"); drag=null; clearMarks();
+}
+const eText=$("eText");
+eText.addEventListener("pointerdown",ev=>{
+  const cut=ev.target.closest(".cut"); if(!cut||ev.button!==0||ev.target.closest("button")) return;
+  const b=+cut.dataset.k; if(!b) return;
+  ev.preventDefault(); cut.focus({preventScroll:true}); clearMarks();
+  drag={b,cut,to:P.starts[b]}; cut.classList.add("dragging"); document.body.classList.add("dragmode");
+  addEventListener("pointermove",onDragMove); addEventListener("pointerup",onDragEnd); addEventListener("pointercancel",endDrag);
+});
+eText.addEventListener("mousemove",ev=>{
+  if(drag) return;
+  const w=ev.target.closest(".w");
+  if(!w){ if(hoverI!==-1){ hoverI=-1; clearMarks(); $("eHint").textContent=HINT; } return; }
+  const j=+w.dataset.i; if(j===hoverI) return; hoverI=j;
+  const b=nearestBoundary(P.starts,WC,j);
+  if(b==null){ clearMarks(); $("eHint").textContent="Slide "+(slideOf(P.starts,j)+1)+" already starts here."; return; }
+  preview(b,j);
+});
+eText.addEventListener("mouseleave",()=>{ if(drag) return; hoverI=-1; clearMarks(); $("eHint").textContent=HINT; });
+eText.addEventListener("click",ev=>{
+  const btn=ev.target.closest("button");
+  if(btn){ const k=+btn.dataset.k;
+    if(btn.classList.contains("ccheck")){ pushUndo(); P.unsure[k]=false; saveProject(); renderEditor(); focusCut(k); }
+    else if(btn.classList.contains("cren")){
+      const v=prompt("Title for slide "+(k+1)+":",P.titles[k]||"");
+      if(v!==null&&cleanTitle(v)!==P.titles[k]){ pushUndo(); P.titles[k]=cleanTitle(v); saveProject(); renderEditor(); }
+    }
+    return; }
+  const w=ev.target.closest(".w"); if(!w) return;
+  const j=+w.dataset.i, b=nearestBoundary(P.starts,WC,j);
+  if(b!=null) moveBoundary(b,j);
+});
+eText.addEventListener("keydown",ev=>{
+  const cut=ev.target; if(!cut.classList||!cut.classList.contains("cut")) return;
+  const b=+cut.dataset.k; if(!b) return;
+  const dir=(ev.key==="ArrowUp"||ev.key==="ArrowLeft")?-1:(ev.key==="ArrowDown"||ev.key==="ArrowRight")?1:0;
+  if(dir){ ev.preventDefault(); if(moveBoundary(b,stepBoundary(b,dir,ev.shiftKey))) focusCut(b); }
+  else if(ev.key==="Enter"&&P.unsure[b]){ ev.preventDefault(); pushUndo(); P.unsure[b]=false; saveProject(); renderEditor(); focusCut(b); }
+});
+document.addEventListener("keydown",ev=>{
+  if(!editorOpen||setupOpen) return;
+  const tg=ev.target; if(tg&&/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)) return;
+  const mod=ev.ctrlKey||ev.metaKey, k=ev.key.toLowerCase();
+  if(mod&&k==="z"&&!ev.shiftKey){ ev.preventDefault(); undo(); }
+  else if(mod&&(k==="y"||(k==="z"&&ev.shiftKey))){ ev.preventDefault(); redo(); }
+  else if(ev.key==="Escape"&&drag){ ev.preventDefault(); endDrag(); renderEditor(); }
+});
+$("eUndo").onclick=undo; $("eRedo").onclick=redo;
+$("eDone").onclick=()=>closeEditor();
+$("eSetup").onclick=openSetup;
+$("eTiming").onclick=()=>$("opts").classList.add("on");
+$("eMsgClose").onclick=()=>{ P.msgs=[]; saveProject(); eSummary(); };
+$("eCheck").onclick=()=>{
+  const ks=P.unsure.map((u,k)=>u?k:-1).filter(k=>k>0); if(!ks.length) return;
+  const k=ks.find(q=>q>checkAt)||ks[0]; checkAt=k;
+  const c=$("eText").querySelector('.cut[data-k="'+k+'"]');
+  if(c){ c.scrollIntoView({block:"center"}); c.focus({preventScroll:true}); }
+};
+
+/* ---- the sample speech: neutral, short, and it shows every piece of markup ------- */
+const SAMPLE=[
+"[SLIDE 1: Title]",
+"Picture the hottest street you walked down this summer. // Now picture the same street with a row of trees. **Same sun. Different street.**",
+"",
+"[SLIDE 2: The problem]",
+"Roads and car parks soak up heat all day and give it back all night. On a summer afternoon, bare asphalt can be more than twenty degrees hotter than the air above it. //",
+"That heat doesn't stay outside. It pushes up cooling bills, it keeps people awake, and in a heatwave it puts older neighbours in hospital.",
+"",
+"[SLIDE 3: What trees do]",
+"A street tree cools in two ways. [[point at the diagram]] Its canopy shades the ground, so the sun never reaches the asphalt. And its leaves release water, which cools the air around them, the way sweat cools skin.",
+"That is not a gadget. /// It is a **plant**.",
+"",
+"[SLIDE 4: The ask]",
+"So here is what I am asking. Pick one street near you with no trees, and ask your council to plant some. //",
+"It costs less than you think, it lasts longer than any of us, and it starts with **one email**.",
+"Thank you.",
+""].join("\n");
+
+/* ---- self-test: open this file with #selftest -------------------------------------
+   Chrome won't let a file:// page read or script other local files, so a separate
+   test page can't load this app. The checks live here instead. They never touch
+   saved data.                                                                   */
+async function makeZip(files,deflate){
+  const enc=new TextEncoder(), parts=[], cd=[]; let off=0;
+  for(const [name,text] of files){
+    const nb=enc.encode(name), raw=enc.encode(text); let data=raw, method=0;
+    if(deflate){ data=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer()); method=8; }
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(8,method,true);
+    lh.setUint32(18,data.length,true); lh.setUint32(22,raw.length,true); lh.setUint16(26,nb.length,true);
+    parts.push(new Uint8Array(lh.buffer),nb,data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(10,method,true);
+    ch.setUint32(20,data.length,true); ch.setUint32(24,raw.length,true); ch.setUint16(28,nb.length,true); ch.setUint32(42,off,true);
+    cd.push(new Uint8Array(ch.buffer),nb);
+    off+=30+nb.length+data.length;
+  }
+  const e=new DataView(new ArrayBuffer(22)), cdSize=cd.reduce((a,b)=>a+b.length,0);
+  e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true);
+  e.setUint32(12,cdSize,true); e.setUint32(16,off,true);
+  return new Blob([...parts,...cd,new Uint8Array(e.buffer)]);
+}
+async function selfTest(){
+  const R=[], ok=(name,c,info)=>R.push({name,pass:!!c,info:c?"":(info||"")}), J=JSON.stringify, eq=(a,b)=>J(a)===J(b);
+  try{
+    const t=tokenize("Hello **big world**. // Next [[point]] one ///\nNew para, **you**.");
+    ok("tokenize: kinds", t.map(x=>x.k).join("")==="wwwbwdwswww", t.map(x=>x.k).join(""));
+    ok("tokenize: stress", eq(t.filter(x=>x.k==="w").map(x=>!!x.st),[false,true,true,false,false,false,false,true]));
+    ok("tokenize: sentence starts", eq(t.filter(x=>x.k==="w").map(x=>!!x.ss),[true,false,false,true,false,true,false,false]));
+    ok("tokenize: paragraphs", eq(t.map((x,k)=>x.p?k:-1).filter(k=>k>=0),[0,8]));
+    ok("round trip: detokenize then tokenize", eq(tokenize(detokenize(t)),t), detokenize(t));
+    const Ts=tokenize(newProject(SAMPLE,{},1).text);
+    ok("round trip: sample", eq(tokenize(detokenize(Ts)),Ts));
+
+    const p1=newProject(SAMPLE,{name:"s",source:"sample"},1);
+    ok("markers: sample has 4 slides", p1.starts.length===4&&p1.method==="markers", J(p1.starts));
+    ok("markers: titles", eq(p1.titles,["Title","The problem","What trees do","The ask"]), J(p1.titles));
+    ok("markers: nothing flagged", !p1.unsure.some(Boolean)&&!p1.msgs.length, J(p1.msgs));
+    const T1=tokenize(p1.text), p2=newProject(exportText(p1,T1),{},1);
+    ok("export then import keeps the split", eq(p2.starts,p1.starts)&&p2.text===p1.text&&eq(p2.titles,p1.titles));
+    const g=newProject("[SLIDE 1] One here.\n[SLIDE 3] Three here.",{},1);
+    ok("markers: a gap makes an empty, flagged slide", g.starts.length===3&&g.starts[1]===g.starts[2]&&g.unsure[1]===true, J(g));
+    const o=newProject("[SLIDE 2] A.\n[SLIDE 1] B.",{},1);
+    ok("markers: out of order keeps the order they appear in", o.starts.length===2&&o.unsure[1]===true&&o.msgs.length===1, J(o));
+    const l=newProject("Slide 1 – Welcome\nHi there.\n## Slide 2: Details\nMore words here.",{},1);
+    ok("markers: heading lines with titles", l.starts.length===2&&eq(l.titles,["Welcome","Details"]), J(l.titles));
+    const bq=newProject("Intro words.\n[SLIDE 2] Rest.",{},1);
+    ok("markers: text before [SLIDE 2] becomes slide 1", bq.starts.length===2&&tokenize(bq.text)[0].s==="Intro"&&bq.msgs.length===1);
+    const inl=newProject("`[SLIDE 1]` First. `[SLIDE 2]` Second.",{},1);
+    ok("markers: inline, in backticks", inl.starts.length===2&&detokenize(tokenize(inl.text),inl.starts[1])==="Second.", J(inl));
+    const old=newProject("[SLIDE 1] — Title  (0:12)\nWords here.",{},1);
+    ok("markers: the old export format's title and time", eq(old.titles,["Title"])&&tokenize(old.text).length===2, J(old));
+    const long=newProject("Slide 2: So why does a street with trees feel so much cooler on a summer afternoon?\nMore.",{},1);
+    ok("markers: a long line after 'Slide 2:' is speech, not a title", long.titles[1]===""&&tokenize(long.text).length>10, J(long.titles));
+
+    const paras=Array.from({length:10},(_,k)=>"Paragraph "+(k+1)+" has a few words. It ends here.").join("\n");
+    const e=newProject(paras,{},5), Te=tokenize(e.text);
+    ok("equal parts: 5 parts, each at a paragraph start", e.starts.length===5&&e.starts.every((s,k)=>k===0||(s>e.starts[k-1]&&Te[s].p))&&e.unsure.slice(1).every(Boolean), J(e.starts));
+    ok("equal parts: more slides than sentences leaves empty slides", newProject("One. Two.",{},4).starts.length===4);
+    const wrapped="This line is wrapped at about seventy characters and it just keeps\ngoing on the next line because it was hard wrapped by an old editor\nand never ends with punctuation until the very end of the paragraph.\n\nThe second paragraph is also wrapped just like this one so that the\ndetector sees the same pattern again, across many lines of the file.";
+    ok("paragraphs: hard-wrapped lines are joined", paraMode(wrapped.split("\n"))==="blocks");
+    ok("paragraphs: one per line stays one per line", paraMode(SAMPLE.split("\n"))==="lines");
+    ok("skips markdown headings and dividers", newProject("# Speech\n---\nHello there.",{},1).text==="Hello there.");
+
+    const T3=tokenize("One two three. Four five six. Seven eight nine. Ten eleven twelve."), wc3=wordCounts(T3), sn3=snapPoints(T3);
+    ok("snap points are sentence starts", eq(sn3,[0,3,6,9]), J(sn3));
+    ok("snap pulls back over a stage direction", eq(snapPoints(tokenize("One. [[look up]] Two.")),[0,1]));
+    ok("click: nearest line ahead moves back", nearestBoundary([0,6],wc3,5)===1);
+    ok("click: nearest line behind moves forward", nearestBoundary([0,3,9],wc3,4)===1);
+    ok("click: a tie goes to the next slide", nearestBoundary([0,3,9],wc3,6)===2);
+    ok("click: already a slide start", nearestBoundary([0,6],wc3,6)===null);
+    ok("click: next to an empty slide moves the empty slide's line", nearestBoundary([0,6,6],wc3,5)===1);
+    ok("drag snaps to the nearest sentence", snapNear([0,6],sn3,wc3,4,1,12)===3);
+    ok("drag stops at the next line", snapNear([0,3,6],sn3,wc3,11,1,12)===6);
+    ok("drag can empty the slide before", snapNear([0,6],sn3,wc3,0,1,12)===0);
+
+    const W='xmlns:w="'+NS_W+'" xmlns:mc="'+NS_MC+'"';
+    const xml='<w:document '+W+'><w:body><w:p><w:r><w:t xml:space="preserve">Keep </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>this</w:t></w:r>'+
+      '<w:del><w:r><w:delText>gone</w:delText></w:r></w:del><w:ins><w:r><w:t xml:space="preserve"> and this</w:t></w:r></w:ins></w:p>'+
+      '<w:p><mc:AlternateContent><mc:Choice><w:r><w:t>A</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>A</w:t></w:r></mc:Fallback></mc:AlternateContent>'+
+      '<w:r><w:rPr><w:b w:val="0"/></w:rPr><w:t xml:space="preserve"> plain</w:t></w:r></w:p></w:body></w:document>';
+    ok("docx: bold, tracked changes, fallback copies", docxText(xml)==="Keep **this** and this\nA plain", J(docxText(xml)));
+    ok("text: UTF-8 with BOM", decodeText(new Uint8Array([0xEF,0xBB,0xBF,0x68,0xC3,0xA9]))==="hé");
+    ok("text: Windows-1252 fallback", decodeText(new Uint8Array([0x63,0x61,0x66,0xE9]))==="café");
+    ok("text: UTF-16 with BOM", decodeText(new Uint8Array([0xFF,0xFE,0x68,0x00,0x69,0x00]))==="hi");
+    for(const deflate of [false,true]){
+      if(deflate&&typeof CompressionStream!=="function"){ ok("zip: deflated (skipped, no CompressionStream here)",true); continue; }
+      const z=await zipOpen(await makeZip([["a.txt","x"],["word/document.xml",xml]],deflate));
+      ok("zip: "+(deflate?"deflated":"stored")+" entry reads back", (await z.text("word/document.xml"))===xml);
+    }
+    const f=new File([await makeZip([["[Content_Types].xml","<x/>"],["word/document.xml",xml]],typeof CompressionStream==="function")],"t.docx");
+    const r=await readSpeechFile(f);
+    ok("readSpeechFile: .docx end to end", r.source==="docx"&&r.text.startsWith("Keep **this**"), J(r));
+    let threw=""; try{ await readSpeechFile(new File([new Uint8Array([0xD0,0xCF,0x11,0xE0,0,0,0,0])],"x.doc")); }catch(err){ threw=err.message; }
+    ok("readSpeechFile: old .doc is refused with advice", /\.docx/.test(threw), threw);
+
+    // shared storage: fake stores only, never the real one
+    const fake=()=>{ const m=new Map(); return {m,getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>{m.set(k,String(v));},removeItem:k=>{m.delete(k);}}; };
+    const st=fake(); st.setItem("hashing.opts",'{"wpm":150}'); st.setItem("speechRehearsal.opts",'{"wpm":160}');
+    st.setItem("hashing.text",'{"2":{"full":"<p>Hi</p>"}}'); st.setItem("flowlist.board","KEEP");
+    migrateKeys(st);
+    ok("storage: old keys move under speech-rehearsal., newest wins", st.getItem(K_OPTS)==='{"wpm":160}'&&st.getItem(K_OLDEDITS)==='{"2":{"full":"<p>Hi</p>"}}'&&
+      !st.m.has("hashing.opts")&&!st.m.has("hashing.text")&&!st.m.has("speechRehearsal.opts"), J([...st.m]));
+    ok("storage: another app's keys are left alone", st.getItem("flowlist.board")==="KEEP"&&st.m.size===3, J([...st.m]));
+    const st2=fake(); st2.setItem(K_OPTS,"NEW"); st2.setItem("hashing.opts","OLD"); migrateKeys(st2);
+    ok("storage: an existing new key is not overwritten", st2.getItem(K_OPTS)==="NEW"&&!st2.m.has("hashing.opts"));
+    const st3=fake(); st3.setItem("hashing.opts","X"); st3.setItem=()=>{ throw new Error("full"); }; migrateKeys(st3);
+    ok("storage: if the copy fails, nothing is removed", st3.m.get("hashing.opts")==="X");
+    const src=[...document.scripts].map(s=>s.textContent).join("\n");
+    ok("storage: no clear(), and removeItem only in migrateKeys", !src.includes("localStorage"+".clear(")&&src.split(".remove"+"Item(").length===2);
+    const sp=slimProject(newProject(SAMPLE,{},1));
+    ok("storage: unchanged original is stored as null", sp.orig.text===null);
+    const back=validProject(JSON.parse(J(sp)));
+    ok("storage: and restored on load", back&&back.orig.text===back.text);
+    window.__oe=0;
+    const oe=oldEditsText({"3":{"full":'<p>My <strong>own</strong> words.<i class="beat"></i></p><p><img src=x onerror="window.__oe=1">Next.</p>'},"1":{"keys":"k"}});
+    await new Promise(r=>setTimeout(r,50));
+    ok("old edits: back to marked-up text, nothing runs", oe==="[SLIDE 3]\nMy **own** words. //\nNext.\n"&&window.__oe===0, J(oe));
+  }catch(err){ ok("threw: "+err.message,false,err.stack); }
+  const pass=R.filter(r=>r.pass).length, box=el("div"); box.id="selftest";
+  box.appendChild(el("h2",null,"Self-test: "+pass+" of "+R.length+" passed"));
+  R.forEach(r=>{ const d=el("div",r.pass?"pass":"fail",(r.pass?"PASS  ":"FAIL  ")+r.name); if(r.info) d.appendChild(el("div",null,"      "+r.info)); box.appendChild(d); });
+  document.body.appendChild(box);
+  document.title="selftest "+pass+"/"+R.length;
+  return R;
+}
+
+/* ---- start ------------------------------------------------------------------------ */
+try{ migrateKeys(localStorage); }catch(e){}      // reading the localStorage property itself can throw
+optLoad(); optApply();
+$("oldEdits").hidden=!oldEditsText(load(K_OLDEDITS));
+P=validProject(load(K_PROJ));
+if(P){ T=tokenize(P.text); refreshIndex(); }
+derive(); ribbon(); render(); refreshPlan();
+addEventListener("blur",()=>$("unfocused").classList.add("on"));
+addEventListener("focus",()=>$("unfocused").classList.remove("on"));
+$("unfocused").onclick=()=>{window.focus();$("unfocused").classList.remove("on");};
+if(location.hash==="#selftest") selfTest(); else openSetup();
+</script></body></html>
