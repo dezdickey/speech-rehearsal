@@ -60,8 +60,8 @@ show never needs focus.
 2. If none is open, it asks which one you're rehearsing (a normal Windows file
    picker), opens it, and starts the slide show. A `.pptx` opens in PowerPoint if you
    have it; an `.odp` opens in Impress.
-3. It opens the app, already connected: the button reads **Live PowerPoint ✓** or
-   **Live Impress ✓**, and all your saved rehearsals are there.
+3. It opens the app, already connected: the top bar reads **PowerPoint connected** or
+   **Impress connected**, and all your saved rehearsals are there.
 
 Keep its window open while you practise; it stops itself after 2 idle hours. If
 there's no slide show to drive (you cancel the picker, or have neither program), the
@@ -105,8 +105,8 @@ there. `Ctrl+Z` undoes. Guessed boundaries are dashed and flagged "check".
 ### Your rehearsals
 
 Every speech you split is kept as its own rehearsal on this computer. It's never
-written over another one. The menu (the **Menu** button, or **M**) lists them, with
-slide count and planned time. Leaving a run in progress asks first.
+written over another one. The home screen (**← Rehearsals** at the top left, or **M**)
+lists them, with slide count and planned time. Leaving a run in progress asks first.
 
 With two or more, you can **sort** them by **Last opened** (the default), **Last
 edited**, **Newest first**, **Oldest first**, **Name (A–Z)** or **Longest first**, and
@@ -115,16 +115,22 @@ Opening a rehearsal doesn't count as editing it, and renaming changes no dates. 
 chosen order is remembered. For each rehearsal:
 
 - **Continue** or **Edit split** picks one up where you left it.
-- **Rename** gives it a clearer name. New ones are named after the file, or the
-  speech's first few words.
-- **Export** saves it as a `.rehearsal.json` file. **Open file…** opens that file on
-  another computer, or after clearing your browser data.
-- **Delete** removes it.
+- Its **⋯** menu holds the rest:
+  - **Rename** gives it a clearer name. New ones are named after the file, or the
+    speech's first few words.
+  - **Export** saves it as a `.rehearsal.json` file. **Open a file** opens that file
+    on another computer, or after clearing your browser data.
+  - **Delete** removes it.
 
-Up to 30 are kept. Options → **Save .txt** also writes the speech with its slide
+Up to 30 are kept. **More → Save as .txt** also writes the speech with its slide
 markers, and opening that file gives the same split back.
 
 ## Using it
+
+The top bar holds the connection to your slides, the detail level, and a **More** menu:
+**Edit text**, **Fix the split**, **Options**, **Save as .txt**, **Export rehearsal**
+and **Reset run**. The app is light by default; Options → Theme has a dark look for dim
+rooms. **All keys**, at the bottom right, lists every shortcut.
 
 | Key | Action |
 |---|---|
@@ -132,9 +138,10 @@ markers, and opening that file gives the same split back.
 | `Page Up` / `←` | Previous slide |
 | `F5` | Start the clock |
 | `b` / `.` | Blank the slide show |
-| `R` | Reset |
+| `R` | Reset the run |
 | `1` `2` `3` | Detail level: full script, keywords, cue only |
-| `M` | Menu: your rehearsals, or a new one |
+| `E` | Edit this slide's text |
+| `M` | Your rehearsals, or a new one |
 | `,` | Options |
 
 Logitech presenters send Page Down, Page Up, F5, Escape and `b` by default, so a
