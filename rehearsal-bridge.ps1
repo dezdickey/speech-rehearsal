@@ -24,17 +24,17 @@
   Commands are POST, not GET: side effects do not belong on a method that an
   <img> tag can trigger.
 
-  Run with Start-Rehearsal-Bridge.cmd, or:
+  Run with "Start Speech Rehearsal.cmd", or:
      powershell -ExecutionPolicy Bypass -File rehearsal-bridge.ps1
 
-  Ctrl+C to stop. It also stops itself after 30 idle minutes.
+  Ctrl+C to stop. It also stops itself after 2 idle hours (-IdleMinutes).
 #>
 
 param(
   [string]$Deck = "",
   [int]$Port = 8765,
   [string]$Target = "",           # window title for keystroke mode (LibreOffice Impress)
-  [int]$IdleMinutes = 30,
+  [int]$IdleMinutes = 120,        # 2 hours: long enough to stop and rework lines mid-session
   [switch]$NoBrowser
 )
 
@@ -79,48 +79,43 @@ function Test-HostHeader([string]$h) {
   return ($name -eq "127.0.0.1" -or $name -eq "localhost")
 }
 
-# ---------------------------------------------------------------- find the deck
-if (-not $Target) {
-  if (-not $Deck) {
-    $f = Get-ChildItem -Path $here -Filter *.pptx -File -ErrorAction SilentlyContinue |
-         Sort-Object Name | Select-Object -First 1
-    if ($f) { $Deck = $f.FullName }
-  }
-  if (-not $Deck -or -not (Test-Path $Deck)) {
-    Say "  No .pptx found next to this script." "Yellow"
-    Say "  Put a .pptx in this folder (demo-deck.pptx ships with it), or pass -Deck ""C:\path\deck.pptx""" "DarkGray"
-    Read-Host "`n  Press Enter to close"; exit 1
-  }
+# ------------------------------------------------------- find the slide show to drive
+# In order: a presentation already open in PowerPoint, then one open in LibreOffice
+# Impress; otherwise -Deck, or ask with a standard file picker. A chosen file opens in
+# PowerPoint if it's installed (an .odp opens in Impress when LibreOffice is), else in
+# Impress. Keystroke mode only with an explicit -Target. If there is nothing to drive,
+# the app still opens on its own: it works fully without the bridge.
+$ppt = $null; $pres = $null; $mode = $null
+$uno = $null; $unoCtl = $null
+$hasPpt = Test-Path "Registry::HKEY_CLASSES_ROOT\PowerPoint.Application"
+$hasLo  = Test-Path "Registry::HKEY_CLASSES_ROOT\com.sun.star.ServiceManager"
+
+function Use-PowerPoint([string]$file) {
+  # Attach to PowerPoint. With $file, open it; without, use what's already open there.
+  $script:ppt = New-Object -ComObject PowerPoint.Application
+  $script:ppt.Visible = -1                          # msoTrue: PowerShell will not cast $true to MsoTriState
+  if ($file) {
+    Say "  Opening $(Split-Path -Leaf $file) in PowerPoint ..." "DarkGray"
+    $script:pres = $script:ppt.Presentations.Open($file, $false, $false, $true)
+  } elseif ($script:ppt.SlideShowWindows.Count -ge 1) {
+    $script:pres = $script:ppt.SlideShowWindows.Item(1).Presentation
+  } elseif ($script:ppt.Presentations.Count -ge 1) {
+    $script:pres = $script:ppt.Presentations.Item(1)
+    try { $script:pres = $script:ppt.ActivePresentation } catch { }
+  } else { return $false }
+  if ($file -or $script:ppt.SlideShowWindows.Count -lt 1) { $script:pres.SlideShowSettings.Run() | Out-Null }
+  # The show window can take seconds to appear, and PowerPoint rejects calls while it
+  # starts (RPC_E_CALL_REJECTED). Wait for it instead of guessing a delay.
+  for ($k = 0; $k -lt 40; $k++) { try { if ($script:ppt.SlideShowWindows.Count -ge 1) { break } } catch { }; Start-Sleep -Milliseconds 250 }
+  Say "  PowerPoint slide show running - animations live. ($($script:pres.Name))" "Green"
+  return $true
 }
 
-# ------------------------------------------------------------ connect to viewer
-$ppt = $null; $pres = $null; $mode = "sendkeys"
-if (-not $Target) {
-  try {
-    $ppt = New-Object -ComObject PowerPoint.Application
-    $ppt.Visible = -1                                  # msoTrue: PowerShell will not cast $true to MsoTriState
-    Say "  Opening $(Split-Path -Leaf $Deck) ..." "DarkGray"
-    $pres = $ppt.Presentations.Open($Deck, $false, $false, $true)
-    $pres.SlideShowSettings.Run() | Out-Null
-    # The show window can take seconds to appear, and PowerPoint rejects calls while it
-    # starts (RPC_E_CALL_REJECTED). Wait for it instead of guessing a delay.
-    for ($k = 0; $k -lt 40; $k++) { try { if ($ppt.SlideShowWindows.Count -ge 1) { break } } catch { }; Start-Sleep -Milliseconds 250 }
-    $mode = "com"
-    Say "  PowerPoint slide show running - animations live." "Green"
-  } catch {
-    Say "  Could not drive PowerPoint ($($_.Exception.Message))." "Yellow"
-    $ppt = $null; $mode = "sendkeys"
-  }
-}
-
-# ------------------------------------------------ or LibreOffice Impress, directly
 # LibreOffice registers an automation (COM) bridge on Windows. It drives the show the
 # way COM drives PowerPoint: no keystrokes, no focus changes. Keystrokes can't work
 # reliably with Impress anyway: its show window can't take keyboard focus.
 # PowerShell's usual COM binding needs type information this bridge doesn't provide,
-# so every call goes through InvokeMember. Only tried when LibreOffice is already
-# running, so the bridge never starts it in the background.
-$uno = $null; $unoCtl = $null
+# so every call goes through InvokeMember.
 function Uno($o, [string]$m, [object[]]$a = @()) {
   [System.__ComObject].InvokeMember($m, [Reflection.BindingFlags]::InvokeMethod, $null, $o, $a)
 }
@@ -130,7 +125,7 @@ function Get-ImpressShow {
   try { if ($script:unoCtl -and (Uno $script:unoCtl "isRunning")) { return $script:unoCtl } } catch { }
   $script:unoCtl = $null
   try {
-    $desk = Uno $uno "createInstance" @("com.sun.star.frame.Desktop")
+    $desk = Uno $script:uno "createInstance" @("com.sun.star.frame.Desktop")
     $en = Uno (Uno $desk "getComponents") "createEnumeration"; $idle = $null
     while (Uno $en "hasMoreElements") {
       $c = Uno $en "nextElement"
@@ -146,16 +141,70 @@ function Get-ImpressShow {
   } catch { $script:unoCtl = $null }
   return $script:unoCtl
 }
-if ($mode -eq "sendkeys" -and -not $Target -and (Get-Process -Name soffice.bin -ErrorAction SilentlyContinue)) {
-  try {
-    $uno = New-Object -ComObject com.sun.star.ServiceManager
-    if (Get-ImpressShow) { $mode = "uno"; Say "  LibreOffice Impress slide show found - driving it directly, no keystrokes." "Green" }
-    else { Say "  LibreOffice is running, but no presentation is open in it." "Yellow" }
-  } catch { Say "  Could not drive LibreOffice Impress ($($_.Exception.Message))." "Yellow" }
+function Use-Impress([string]$file) {
+  # Attach to LibreOffice (which starts it if it isn't running). With $file, open it
+  # and start its show; without, use the presentation already open there.
+  $script:uno = New-Object -ComObject com.sun.star.ServiceManager
+  if ($file) {
+    $desk = Uno $script:uno "createInstance" @("com.sun.star.frame.Desktop")
+    Say "  Opening $(Split-Path -Leaf $file) in LibreOffice Impress ..." "DarkGray"
+    $doc = Uno $desk "loadComponentFromURL" @(([Uri]$file).AbsoluteUri, "_blank", 0, [object[]]@())
+    if (-not $doc) { return $false }
+    $pr = Uno $doc "getPresentation"; Uno $pr "start" | Out-Null
+    for ($k = 0; $k -lt 40 -and -not $script:unoCtl; $k++) { Start-Sleep -Milliseconds 250; try { $script:unoCtl = Uno $pr "getController" } catch { } }
+    if (-not $script:unoCtl) { return $false }
+  } elseif (-not (Get-ImpressShow)) { return $false }
+  Say "  LibreOffice Impress slide show running - driving it directly, no keystrokes." "Green"
+  return $true
+}
+function Select-Deck {
+  # A standard Windows file picker, starting in this folder (demo-deck.pptx is here).
+  Add-Type -AssemblyName System.Windows.Forms
+  $owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true }
+  $dlg = New-Object System.Windows.Forms.OpenFileDialog -Property @{
+    Title = "Which presentation are you rehearsing?"
+    InitialDirectory = $here
+    Filter = "Presentations (*.pptx; *.ppt; *.ppsx; *.odp)|*.pptx;*.ppt;*.ppsx;*.odp|All files (*.*)|*.*" }
+  try { $ok = ($dlg.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) } finally { $owner.Dispose() }
+  if ($ok) { return $dlg.FileName }
+  return $null
+}
+
+if ($Target) {
+  $mode = "sendkeys"
+} else {
+  if (-not $Deck -and (Get-Process -Name POWERPNT -ErrorAction SilentlyContinue)) {
+    try { if (Use-PowerPoint "") { $mode = "com" } } catch { Say "  Could not use the open PowerPoint ($($_.Exception.Message))." "Yellow" }
+  }
+  if (-not $mode -and -not $Deck -and (Get-Process -Name soffice.bin -ErrorAction SilentlyContinue)) {
+    try { if (Use-Impress "") { $mode = "uno" } } catch { Say "  Could not use the open LibreOffice ($($_.Exception.Message))." "Yellow" }
+  }
+  if (-not $mode) {
+    $file = $Deck
+    if (-not $file) { Say "  No presentation is open. Choose the one you're rehearsing..." "White"; $file = Select-Deck }
+    if ($file -and (Test-Path -LiteralPath $file)) {
+      $file = (Resolve-Path -LiteralPath $file).Path
+      $wantLo = $hasLo -and ($file -match '\.f?odp$')
+      if ($hasPpt -and -not $wantLo) {
+        try { if (Use-PowerPoint $file) { $mode = "com" } } catch { Say "  Could not drive PowerPoint ($($_.Exception.Message))." "Yellow" }
+      }
+      if (-not $mode -and $hasLo) {
+        try { if (Use-Impress $file) { $mode = "uno" } } catch { Say "  Could not drive LibreOffice Impress ($($_.Exception.Message))." "Yellow" }
+      }
+      if (-not $hasPpt -and -not $hasLo) { Say "  Neither PowerPoint nor LibreOffice is installed, so there is no slide show to drive." "Yellow" }
+    } elseif ($file) { Say "  Can't find $file." "Yellow" }
+  }
+  if (-not $mode) {
+    $plain = Join-Path $here "speech-rehearsal.html"
+    Say "  No slide show to drive, so the app opens on its own. Start this again when you want slides." "Yellow"
+    if ((Test-Path -LiteralPath $plain) -and -not $NoBrowser) { try { Start-Process $plain | Out-Null } catch { } }
+    exit 0
+  }
 }
 
 if ($mode -eq "sendkeys") {
-  # Last resort: keystrokes, which need window switching. Only set up when used.
+  # Last resort, and only when asked for with -Target: keystrokes, which need window
+  # switching. Only set up when used.
   $wsh = New-Object -ComObject WScript.Shell
   if (-not ("Native.Win32Focus" -as [type])) {
     Add-Type -Namespace Native -Name Win32Focus -MemberDefinition @"
@@ -163,7 +212,6 @@ if ($mode -eq "sendkeys") {
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr hWnd);
 "@ -ErrorAction SilentlyContinue
   }
-  if (-not $Target) { $Target = "Impress" }
   Say "  Keystroke mode - sending keys to a window matching '$Target'." "Yellow"
 }
 

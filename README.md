@@ -40,7 +40,7 @@ show never needs focus.
 |---|---|
 | `speech-rehearsal.html` | The rehearsal app: setup, split editor, teleprompter, split timer, pace bar. Works on its own |
 | `rehearsal-bridge.ps1` | The optional local server. Token auth, origin and host checks, drives PowerPoint or Impress |
-| `Start-Rehearsal-Bridge.cmd` | Double-click launcher for the bridge |
+| `Start Speech Rehearsal.cmd` | **Start here** when you have slides: starts the bridge, which connects to your presentation and opens the app |
 | `demo-deck.pptx` | A 4-slide demo deck that pairs with the app's built-in sample speech |
 | `tools/demo-deck.fodp` | The demo deck's editable source (LibreOffice flat XML) |
 | `rehearsal-bridge.v1.ps1` | **Not for everyday use.** The original, deliberately vulnerable version, kept for the security writeup. Run it only for the test in `TESTING.md` |
@@ -51,24 +51,31 @@ show never needs focus.
 
 ---
 
-## Quick start: the app alone
+## Start here
 
-Double-click `speech-rehearsal.html`. It opens in your browser on a setup screen;
-paste your speech, open a `.txt` or `.docx`, or click **Try the sample**. That is all
-you need to rehearse with the script, the clock and your clicker. Nothing leaves your
-computer, and there is no AI involved.
+**With your slides (Windows, PowerPoint or LibreOffice Impress):** double-click
+**`Start Speech Rehearsal.cmd`**. That's the whole start-up:
 
-## Driving the slides too: the bridge (optional, Windows)
+1. It uses the presentation you already have open, in PowerPoint or in Impress.
+2. If none is open, it asks which one you're rehearsing (a normal Windows file
+   picker), opens it, and starts the slide show. A `.pptx` opens in PowerPoint if you
+   have it; an `.odp` opens in Impress.
+3. It opens the app, already connected: the button reads **Live PowerPoint ✓** or
+   **Live Impress ✓**, and all your saved rehearsals are there.
 
-1. Put all the files in one folder.
-2. **LibreOffice Impress:** open your deck and start the show. **PowerPoint:** the
-   bridge opens the first `.pptx` in its folder and starts the show itself.
-3. Double-click `Start-Rehearsal-Bridge.cmd`.
+Keep its window open while you practise; it stops itself after 2 idle hours. If
+there's no slide show to drive (you cancel the picker, or have neither program), the
+app opens on its own anyway.
 
-The bridge mints a session token and opens the rehearsal page with that token in the
-URL fragment; the page connects on its own and the button reads **Live Impress ✓**
-or **Live PowerPoint ✓**. If the page ever says **Connect (needs token)**, click it
-and paste the `Session token:` line from the bridge window.
+**Without slides** (or if your antivirus blocks the bridge): double-click
+`speech-rehearsal.html`. The script, the clock and your clicker all work without the
+bridge. Nothing leaves your computer, and there is no AI involved.
+
+Behind the scenes, the bridge mints a session token and opens the page with it in
+the URL fragment. The tab remembers it, so reloading stays connected. If you opened
+the page yourself, **Connect slides** tells you whether the bridge is running. If it
+isn't, it says to start the launcher; if it is, it asks for the token and says where
+to find it: the "Speech rehearsal bridge" window, on the `Session token:` line.
 
 Drag the slide show to your second screen, then click once on the rehearsal window
 so the clicker is aimed at it. An amber bar appears across the bottom whenever that
@@ -93,9 +100,29 @@ and the speech is cut into equal parts for you to fix. Optional markup:
 The split then opens in an editor: the whole speech, each slide's words in its own
 colour, and a labelled line where each slide starts. Drag a line and it snaps to
 the nearest sentence start; click a word and the nearest line moves exactly
-there. `Ctrl+Z` undoes. Guessed boundaries are dashed and flagged "check". The
-split is remembered on this computer, and **Save .txt** in Options writes the
-speech with its markers, so importing that file gives the same split back.
+there. `Ctrl+Z` undoes. Guessed boundaries are dashed and flagged "check".
+
+### Your rehearsals
+
+Every speech you split is kept as its own rehearsal on this computer. It's never
+written over another one. The menu (the **Menu** button, or **M**) lists them, with
+slide count and planned time. Leaving a run in progress asks first.
+
+With two or more, you can **sort** them by **Last opened** (the default), **Last
+edited**, **Newest first**, **Oldest first**, **Name (A–Z)** or **Longest first**, and
+**find** one by name. Each row's date follows the sort ("opened", "edited" or "made").
+Opening a rehearsal doesn't count as editing it, and renaming changes no dates. Your
+chosen order is remembered. For each rehearsal:
+
+- **Continue** or **Edit split** picks one up where you left it.
+- **Rename** gives it a clearer name. New ones are named after the file, or the
+  speech's first few words.
+- **Export** saves it as a `.rehearsal.json` file. **Open file…** opens that file on
+  another computer, or after clearing your browser data.
+- **Delete** removes it.
+
+Up to 30 are kept. Options → **Save .txt** also writes the speech with its slide
+markers, and opening that file gives the same split back.
 
 ## Using it
 
@@ -107,6 +134,7 @@ speech with its markers, so importing that file gives the same split back.
 | `b` / `.` | Blank the slide show |
 | `R` | Reset |
 | `1` `2` `3` | Detail level: full script, keywords, cue only |
+| `M` | Menu: your rehearsals, or a new one |
 | `,` | Options |
 
 Logitech presenters send Page Down, Page Up, F5, Escape and `b` by default, so a
@@ -139,7 +167,8 @@ pace bar so you can see whether you fixed a slide or just moved the problem else
 The bridge drives Impress through LibreOffice's own automation interface (UNO, via
 the COM bridge LibreOffice registers on Windows), the same way it drives PowerPoint:
 no keystrokes, no focus changes, and Back jumps back exactly. It attaches to the show
-that is already running, and starts it if a presentation is open but not showing.
+that is already running, starts it if a presentation is open but not showing, or
+opens the file you pick and starts that.
 
 There is also a keystroke mode (`-Target <window title>`), kept as a last resort. It
 cannot drive an Impress show, whose window never takes keyboard focus, and it carries
@@ -163,10 +192,10 @@ piece of C# compiled at run time to switch window focus.
 **What it actually does.** It listens on `127.0.0.1` only, so nothing off your machine
 can reach it, and it obeys only requests carrying a random token minted for that
 session (see [SECURITY.md](SECURITY.md)). It understands four commands: go to slide
-*n*, blank, unblank, and a health check. At start it looks for a `.pptx` in its own
-folder and reads which browser is your default, so it can open the rehearsal page
-in it. It writes no files, sends nothing to the internet, and shuts itself down
-after 30 idle minutes. It is one PowerShell file of a few hundred lines;
+*n*, blank, unblank, and a health check. At start it looks for a presentation open in
+PowerPoint or Impress, or shows a file picker so you can choose one. It also reads
+which browser is your default, so it can open the rehearsal page in it. It writes no files, sends nothing to the internet, and shuts itself down
+after 2 idle hours. It is one PowerShell file of a few hundred lines;
 read it before you run it.
 
 **If your antivirus blocks it**, the app still works fully without it. Whether to

@@ -176,10 +176,20 @@ td.d.behind{color:var(--coral);font-weight:700} td.d.ahead{color:var(--mint)}
 /* ---- setup ---- */
 .panel.wide{max-width:780px}
 .lead{color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 16px}
-.resume{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--raised);
- border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:14px}
-.resume .grow{flex:1;min-width:200px}
-.resume small{display:block;color:var(--muted);font-family:var(--mono);font-size:12px;margin-top:3px}
+.lib{display:flex;flex-direction:column;gap:8px;margin:0 0 6px}
+.lrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--raised);
+ border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px}
+.lrow.cur{border-color:var(--mint)}
+.lrow .grow{flex:1;min-width:190px;overflow-wrap:anywhere}
+.lrow small{display:block;color:var(--muted);font-family:var(--mono);font-size:12px;margin-top:3px}
+.lrow button{padding:6px 10px;font-size:12.5px}
+.newhead{font-family:var(--serif);font-size:18px;margin:18px 0 4px}
+.libbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;font-size:13px;color:var(--muted)}
+.libbar select,.libbar input{font:13px var(--sans);background:var(--raised);color:var(--paper);
+ border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.libbar input{flex:1;min-width:160px}
+.libbar input:focus,.libbar select:focus{outline:2px solid var(--mint);outline-offset:1px}
+.lnone{color:var(--muted);font-size:13px;padding:6px 2px}
 #pasteBox{display:block;width:100%;min-height:230px;resize:vertical;background:var(--ink);
  color:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
  font:14px/1.55 var(--read)}
@@ -262,7 +272,7 @@ body.dragmode,body.dragmode *{cursor:ns-resize!important;user-select:none}
     <button id="L3" aria-pressed="false">Cue only</button>
   </div>
   <span class="dot" id="liveDot"></span><button class="go" id="liveBtn">Live PowerPoint</button>
-  <button id="setupBtn" title="Change the speech">Speech</button>
+  <button id="setupBtn" title="Your rehearsals, or start a new one (M)">Menu</button>
   <button id="splitBtn" title="Fix where each slide starts">Split</button>
   <button class="go" id="go">Start</button>
   <button id="editBtn" aria-pressed="false" title="Edit the wording (e)">Edit text</button><button id="optsBtn" title="Options (,)">Options</button>
@@ -291,7 +301,7 @@ body.dragmode,body.dragmode *{cursor:ns-resize!important;user-select:none}
   <div class="legend"><span><i class="b"></i>beat ≈ 1s</span><span><i class="s"></i>full stop ≈ 3s</span><span><b class="d">[&nbsp;]</b> stage direction</span></div>
   <div class="spacer"></div>
   <div><kbd>PgDn</kbd> next · <kbd>PgUp</kbd> back · <kbd>F5</kbd> start ·
-    <kbd>b</kbd> blank · <kbd>Esc</kbd> reset · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> detail · <kbd>,</kbd> options</div>
+    <kbd>b</kbd> blank · <kbd>Esc</kbd> reset · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> detail · <kbd>m</kbd> menu · <kbd>,</kbd> options</div>
 </footer>
 
 <div id="opts" aria-label="Options">
@@ -365,22 +375,25 @@ body.dragmode,body.dragmode *{cursor:ns-resize!important;user-select:none}
   <tbody id="rows"></tbody></table>
   <div class="verdict" id="verdict"></div>
   <div style="margin-top:20px;display:flex;gap:10px">
-    <button class="go" id="again">Run it again</button><button id="closeSheet">Close</button></div>
+    <button class="go" id="again">Run it again</button><button id="sheetMenu">Menu</button><button id="closeSheet">Close</button></div>
 </div></div>
 
 <div class="sheet" id="setup"><div class="panel wide" id="setupPanel">
-  <h2>Your speech</h2>
-  <p class="lead">Paste it, or open a .txt or .docx file. Everything stays on this computer.</p>
-  <div class="resume" id="resume" hidden>
-    <div class="grow">Continue with <b id="resumeName"></b><small id="resumeInfo"></small></div>
-    <button id="resumeEdit">Edit the split</button>
-    <button class="go" id="resumeGo">Continue</button>
+  <h2 id="setupTitle">Your speech</h2>
+  <p class="lead">Everything stays on this computer.</p>
+  <div class="libbar" id="libBar" hidden>
+    <label for="libSort">Sort by</label>
+    <select id="libSort"></select>
+    <input id="libFind" type="search" placeholder="Find by name" aria-label="Find a rehearsal by name" autocomplete="off">
   </div>
+  <div class="lib" id="library" hidden></div>
+  <h3 class="newhead" id="newHead" hidden>Start a new rehearsal</h3>
+  <p class="lead">Paste your speech, or open a .txt or .docx file. <b>Open file…</b> also opens a rehearsal you exported.</p>
   <textarea id="pasteBox" spellcheck="false" aria-label="Your speech"
     placeholder="Paste your speech here.&#10;&#10;To mark where each slide starts, put [SLIDE 1], [SLIDE 2] … before it, or a line like “Slide 2 – Title”. Without markers you choose how many slides, and fix the split in the editor.&#10;&#10;Optional: // beat, /// full stop, **word** stress, [[…]] stage direction."></textarea>
   <div class="srow">
-    <button id="openFile">Open .txt or .docx…</button>
-    <input type="file" id="fileIn" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+    <button id="openFile">Open file…</button>
+    <input type="file" id="fileIn" accept=".txt,.docx,.json,text/plain,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
     <button id="sampleBtn">Try the sample</button>
     <span class="fname" id="fileName"></span>
   </div>
@@ -395,7 +408,7 @@ body.dragmode,body.dragmode *{cursor:ns-resize!important;user-select:none}
     <button class="go" id="splitGo" disabled>Split into slides</button>
     <button id="setupCancel" hidden>Cancel</button>
   </div>
-  <p class="small">Your presentation: open it in PowerPoint or Impress as usual. With the bridge running, the app moves it along with you.</p>
+  <p class="small">Want your slides to move with you? Start the app with <b>Start Speech Rehearsal.cmd</b> instead of opening this page: it connects to your presentation in PowerPoint or Impress, and your rehearsals come with you.</p>
 </div></div>
 
 <div id="editor" aria-label="Split editor">
@@ -435,11 +448,21 @@ const txt=s=>document.createTextNode(s);
    localStorage, and other apps live in it (the author's Flowlist board does).
    So: every key starts with "speech-rehearsal.", nothing ever calls clear(),
    nothing removes a key this app didn't write, and what it stores stays small.
-   The only removals are the old names this app itself used before, once their
-   values are safely copied under the new names.                            */
+   Removals happen in exactly two places: migrateKeys (old names this app used
+   before, once their values are copied) and removeOwn (which refuses any key
+   without the prefix).                                                       */
 const PREFIX="speech-rehearsal.";
 const K_OPTS=PREFIX+"opts", K_PROJ=PREFIX+"project", K_OLDEDITS=PREFIX+"old-edits";
+const K_INDEX=PREFIX+"index", K_ITEM=id=>PREFIX+"r."+id;   // the rehearsals list, one key per rehearsal
 const STORE_MAX=256*1024;     // characters per key; a speech is a few dozen KB at most
+const LIB_MAX=30;             // rehearsals kept; enough for a term, small enough to stay polite
+/* the same calls as localStorage, but wrapped: sandboxes that block storage throw */
+const LS={
+  getItem(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  setItem(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } },
+  removeItem(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+function removeOwn(st,key){ if(typeof key!=="string"||!key.startsWith(PREFIX)) return false; st.removeItem(key); return true; }
 const OLD_KEYS=[["speechRehearsal.opts",K_OPTS],["speechRehearsal.project",K_PROJ],
   ["hashing.opts",K_OPTS],["hashing.text",K_OLDEDITS]];
 function migrateKeys(st){
@@ -457,6 +480,80 @@ function store(key,v){
   catch(e){ return false; }   // full or blocked: never make room by deleting anything
 }
 
+/* ---- your rehearsals: a small index, plus one key per rehearsal -------------------
+   Each function takes the storage object, so the self-test can hand it a fake.  */
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const isId=s=>typeof s==="string"&&/^[a-z0-9]{4,24}$/.test(s);
+function libLoad(st){
+  try{
+    const x=JSON.parse(st.getItem(K_INDEX)||"null");
+    if(x&&x.v===1&&Array.isArray(x.items)){
+      const items=x.items.filter(it=>it&&isId(it.id)).slice(0,LIB_MAX)
+        .map(it=>{ const u=+it.updated||0;      // entries from before the three times existed had one
+          return {id:it.id,name:String(it.name||"Untitled").slice(0,80),slides:+it.slides||0,words:+it.words||0,plan:+it.plan||0,
+            created:+it.created||u,opened:+it.opened||u,edited:+it.edited||u}; });
+      return {v:1,current:isId(x.current)&&items.some(it=>it.id===x.current)?x.current:null,items};
+    }
+  }catch(e){}
+  return {v:1,current:null,items:[]};
+}
+function libSave(st,lib){ const s=JSON.stringify(lib); return s.length<=STORE_MAX&&st.setItem(K_INDEX,s)!==false; }
+/* Store a rehearsal under its own key and list it first. Returns "ok", "full",
+   "too-big" or "failed". Nothing is ever deleted to make room.               */
+function libPut(st,p,meta,makeCurrent=true){
+  const s=JSON.stringify(slimProject(p));
+  if(s.length>STORE_MAX) return "too-big";
+  const lib=libLoad(st), known=lib.items.some(it=>it.id===p.id);
+  if(!known&&lib.items.length>=LIB_MAX) return "full";
+  if(st.setItem(K_ITEM(p.id),s)===false) return "failed";
+  const entry=Object.assign({id:p.id},meta);
+  lib.items=makeCurrent ? [entry].concat(lib.items.filter(it=>it.id!==p.id))
+                        : lib.items.map(it=>it.id===p.id?entry:it);
+  if(makeCurrent) lib.current=p.id;
+  return libSave(st,lib)?"ok":"failed";
+}
+function libGet(st,id){
+  if(!isId(id)) return null;
+  try{ const p=validProject(JSON.parse(st.getItem(K_ITEM(id))||"null")); if(p) p.id=id; return p; }catch(e){ return null; }
+}
+function libDelete(st,id){
+  const lib=libLoad(st);
+  lib.items=lib.items.filter(it=>it.id!==id);
+  if(lib.current===id) lib.current=null;
+  libSave(st,lib); removeOwn(st,K_ITEM(id));
+  return lib;
+}
+function metaOf(p){ const t=p.saved||Date.now(); return {name:p.name,slides:p.starts.length,words:tokenize(p.text).filter(t=>t.k==="w").length,plan:0,created:p.created||t,opened:t,edited:t}; }
+/* Opening a rehearsal (Continue, Edit split) counts as "opened", not "edited". */
+function libTouch(st,id,fields){
+  const lib=libLoad(st), it=lib.items.find(x=>x.id===id); if(!it) return false;
+  Object.assign(it,fields); lib.current=id; return libSave(st,lib);
+}
+/* Sorting and finding. The date each row shows follows the sort. */
+const SORTS={
+  opened :{label:"Last opened",   when:"opened", cmp:(a,b)=>b.opened-a.opened},
+  edited :{label:"Last edited",   when:"edited", cmp:(a,b)=>b.edited-a.edited},
+  newest :{label:"Newest first",  when:"created",cmp:(a,b)=>b.created-a.created},
+  oldest :{label:"Oldest first",  when:"created",cmp:(a,b)=>a.created-b.created},
+  name   :{label:"Name (A–Z)",when:"opened", cmp:(a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:"base",numeric:true})},
+  longest:{label:"Longest first", when:"opened", cmp:(a,b)=>(b.plan-a.plan)||(b.words-a.words)}
+};
+function sortItems(items,key,query){
+  const s=Object.prototype.hasOwnProperty.call(SORTS,key)?SORTS[key]:SORTS.opened, q=String(query||"").trim().toLowerCase();
+  return items.filter(it=>!q||it.name.toLowerCase().includes(q)).sort(s.cmp);
+}
+/* The single saved speech from before the list existed becomes its first entry. */
+function migrateLibrary(st){
+  if(st.getItem(K_INDEX)!==null) return;
+  const raw=st.getItem(K_PROJ); if(raw===null) return;
+  let p=null; try{ p=validProject(JSON.parse(raw)); }catch(e){}
+  if(!p) return;                                    // unreadable: leave it alone
+  p.id=newId();
+  if(libPut(st,p,metaOf(p))==="ok") removeOwn(st,K_PROJ);
+}
+/* an exported rehearsal: a file the user can keep, move, and open again */
+function rehearsalFileText(p){ return JSON.stringify({format:"speech-rehearsal",v:1,exported:new Date().toISOString(),project:slimProject(p)},null,1); }
+
 /* ---- Live PowerPoint bridge -------------------------------------------------
    rehearsal-bridge.ps1 drives a real slide show through PowerPoint's automation
    interface, so animations play and focus stays here with the clicker.
@@ -469,11 +566,17 @@ let live=false, lastPushed=-1, BASE=null, TOKEN=null, tokenBad=false;
 const PORTS=[8765,8766,8767];
 
 /* The bridge launches this page with #t=<token>. Fragments never go over the
-   wire. Strip it from the address bar once read so it is not left on screen. */
+   wire. Strip it from the address bar once read so it is not left on screen.
+   It's also kept in this tab's sessionStorage so a reload doesn't lose it:
+   per tab, not shared with other tabs, gone when the tab closes, and dropped
+   the moment the bridge rejects it. Never localStorage, which is shared.   */
+const K_TOKEN=PREFIX+"token";
+function tokenKeep(t){ try{ if(t) sessionStorage.setItem(K_TOKEN,t); else removeOwn(sessionStorage,K_TOKEN); }catch(e){} }
 (function(){
   const m=(location.hash||"").match(/t=([0-9a-f]{32,})/i);
-  if(m){ TOKEN=m[1];
+  if(m){ TOKEN=m[1]; tokenKeep(TOKEN);
     try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} }
+  else { try{ const s=sessionStorage.getItem(K_TOKEN); if(s&&/^[0-9a-f]{32,}$/i.test(s)) TOKEN=s; }catch(e){} }
 })();
 
 async function call(path,ms){
@@ -483,7 +586,7 @@ async function call(path,ms){
     const r=await fetch(BASE+path,{method:"POST",cache:"no-store",signal:c.signal,
       headers:{"X-Rehearsal-Token":TOKEN}});
     clearTimeout(t);
-    if(r.status===401){ tokenBad=true; liveStatus("badtoken"); live=false; return null; }
+    if(r.status===401){ tokenBad=true; tokenKeep(null); liveStatus("badtoken"); live=false; return null; }
     return await r.json();
   }catch(e){ clearTimeout(t); return null; }
 }
@@ -504,10 +607,28 @@ async function liveToggle(){
   if(!j){ liveStatus("nobridge"); return; }
   live=true; lastPushed=-1; liveStatus(j.mode); pushSlide(true);
 }
-function askToken(){
-  const v=prompt("Paste the session token from the bridge window:");
-  if(v && /^[0-9a-f]{32,}$/i.test(v.trim())){ TOKEN=v.trim(); tokenBad=false; liveToggle(); }
-  else if(v!==null) echo("token rejected","expected a long hex string");
+/* Is a bridge running at all? A request without the token gets 401 from a running
+   bridge (which logs it as rejected); no answer at all means there isn't one.  */
+async function bridgeRunning(){
+  for(const p of PORTS){
+    const c=new AbortController(), t=setTimeout(()=>c.abort(),800);
+    try{ const r=await fetch("http://127.0.0.1:"+p+"/health",{method:"POST",cache:"no-store",signal:c.signal});
+      clearTimeout(t); if(r.status===401||r.ok) return true; }
+    catch(e){ clearTimeout(t); }
+  }
+  return false;
+}
+async function askToken(){
+  liveStatus("checking");
+  if(!await bridgeRunning()){
+    liveStatus("nobridge");
+    alert("The bridge isn't running.\n\nTo drive your slides, double-click “Start Speech Rehearsal.cmd” in the app's folder. It opens the app again, already connected, with all your rehearsals, so you can close this tab.");
+    return;
+  }
+  liveStatus("off");
+  const v=prompt("The bridge is running. Paste its session token.\n\nIt's in the “Speech rehearsal bridge” window (look on the taskbar), on the line that starts “Session token:”.");
+  if(v && /^[0-9a-f]{32,}$/i.test(v.trim())){ TOKEN=v.trim(); tokenBad=false; tokenKeep(TOKEN); liveToggle(); }
+  else if(v!==null) echo("token rejected","expected a long string of letters and numbers");
 }
 function liveStatus(s){
   const b=$("liveBtn");
@@ -520,10 +641,10 @@ function liveStatus(s){
     : s==="nobridge" ? "Start the bridge first"
     : s==="badtoken" ? "Token rejected — click to re-enter"
     : s==="lost"     ? "Bridge lost — click to retry"
-    : !TOKEN         ? "Connect (needs token)"
+    : !TOKEN         ? "Connect slides"
     : "Live PowerPoint";
   b.className = live ? "" : "go";
-  if(s==="nobridge") echo("no bridge found","run Start-Rehearsal-Bridge.cmd");
+  if(s==="nobridge") echo("no bridge found","double-click Start Speech Rehearsal.cmd");
   if(s==="badtoken") echo("401 from bridge","that token is from a previous run");
   if(s==="lost")     echo("bridge stopped responding","is the console still open?");
 }
@@ -737,7 +858,7 @@ function newProject(raw,meta,count){
     starts=evenStarts(T,m); titles=Array(m).fill(""); unsure=starts.map((_,k)=>k>0);
     msgs.unshift("No slide markers, so the speech was cut into "+plural(m,"equal part")+" at paragraph or sentence starts. Every boundary is a guess: check each one.");
   }
-  const p={v:1,name:meta.name||"Pasted text",source:meta.source||"paste",text:detokenize(T),
+  const p={v:1,created:Date.now(),name:meta.name||"Pasted text",source:meta.source||"paste",text:detokenize(T),
     titles,starts,unsure:starts.map((_,k)=>k>0&&!!unsure[k]),method,msgs,adjusted:false,saved:Date.now()};
   p.orig={text:p.text,starts:p.starts.slice(),titles:p.titles.slice(),unsure:p.unsure.slice()};
   return p;
@@ -755,7 +876,9 @@ function validProject(p){
   if(on<0||!Array.isArray(o.starts)||!o.starts.length||o.starts[0]!==0||o.starts.some((s,k)=>!Number.isInteger(s)||s<0||s>on||(k&&s<o.starts[k-1]))
      ||!Array.isArray(o.titles)||!Array.isArray(o.unsure))
     p.orig={text:p.text,starts:p.starts.slice(),titles:p.titles.slice(),unsure:p.unsure.slice()};
-  p.name=String(p.name||"Pasted text");
+  p.name=String(p.name||"Pasted text").slice(0,80);
+  p.id=isId(p.id)?p.id:null;
+  p.created=+p.created>0?+p.created:0;
   return p;
 }
 /* the speech with its markers: re-importing it gives the same split back */
@@ -899,6 +1022,11 @@ async function readSpeechFile(file){
     throw new Error("That file isn't a Word document.");
   }
   const text=decodeText(new Uint8Array(await file.arrayBuffer()));
+  if(/\.json$/i.test(name)||/^\s*\{/.test(text)){     // a rehearsal exported from this app?
+    let o=null; try{ o=JSON.parse(text); }catch(e){}
+    if(o&&o.format==="speech-rehearsal"&&o.v===1&&o.project&&typeof o.project==="object") return {rehearsal:o.project,name,source:"rehearsal"};
+    if(/\.json$/i.test(name)) throw new Error("That .json file isn't a rehearsal exported from this app.");
+  }
   if(/[\u0000-\u0008\u000E-\u001F]/.test(text.slice(0,4000))) throw new Error("That doesn't look like a text file. Open a .txt or .docx, or paste the text.");
   return {text,name,source:"txt"};
 }
@@ -909,8 +1037,20 @@ let i=0, level=1, running=false, t0=0, segT0=0, splits=[], hist=[], raf=null, bl
 function refreshIndex(){ WC=wordCounts(T); SNAPS=snapPoints(T); }
 /* Kept small: the imported original is stored only once it differs from the text. */
 function slimProject(p){ return Object.assign({},p,{orig:Object.assign({},p.orig,{text:p.orig.text===p.text?null:p.orig.text})}); }
-function saveProject(){ if(P){ P.saved=Date.now(); store(K_PROJ,slimProject(P)); } }
-function setProject(p){ P=p; T=tokenize(P.text); refreshIndex(); UNDO=[]; REDO=[]; hist=[]; i=0; saveProject(); derive(); }
+/* Every change is saved into the rehearsals list straight away. If storage is full
+   or blocked, the rehearsal still works; it just isn't remembered, and setup says so. */
+let libWarn="";
+function saveProject(){
+  if(!P) return;
+  derive();
+  P.saved=Date.now(); if(!isId(P.id)) P.id=newId();
+  if(!P.created) P.created=P.saved;
+  const r=libPut(LS,P,{name:P.name,slides:P.starts.length,words:WC[T.length]||0,plan:PLAN,created:P.created,opened:P.saved,edited:P.saved});
+  libWarn = r==="full" ? "You already have "+LIB_MAX+" saved rehearsals, the most this app keeps. Delete one you no longer need, or this one won't be remembered."
+          : r==="too-big" ? "This speech is too long to remember on this computer. Export it to keep a copy."
+          : "";
+}
+function setProject(p,save=true){ P=p; T=tokenize(P.text); refreshIndex(); UNDO=[]; REDO=[]; hist=[]; i=0; if(save) saveProject(); else derive(); }
 function partStats(a,b){ let w=0,bt=0,st=0; for(let j=a;j<b;j++){ const k=T[j].k; if(k==="w") w++; else if(k==="b") bt++; else if(k==="s") st++; } return {w,bt,st}; }
 function firstWords(a,b,n){ const out=[]; for(let j=a;j<b&&out.length<n;j++) if(T[j].k==="w") out.push(T[j].s); return out.join(" "); }
 /* Speaking time: words at the pace setting, plus 1 s per beat and 3 s per full
@@ -1090,8 +1230,12 @@ $("liveBtn").onclick=()=>{ if((!TOKEN||tokenBad) && !live) askToken(); else live
 $("go").onclick=start; $("nextBtn").onclick=next; $("reset").onclick=reset;
 $("again").onclick=reset; $("closeSheet").onclick=()=>$("sheet").classList.remove("on");
 [1,2,3].forEach(k=>$("L"+k).onclick=()=>setLevel(k));
-$("setupBtn").onclick=()=>{ if(!running) openSetup(); else echo("speech","stop the clock first"); };
-$("splitBtn").onclick=()=>{ if(!P) openSetup(); else if(!running) openEditor(); else echo("split","stop the clock first"); };
+/* Leaving mid-run asks first, rather than refusing: stopping is what you meant. */
+function leaveRun(question){ if(!running) return true; if(!confirm(question)) return false; reset(); return true; }
+function goMenu(){ if(leaveRun("Stop this run and go to the menu?")){ $("sheet").classList.remove("on"); openSetup(); } }
+$("setupBtn").onclick=goMenu;
+$("sheetMenu").onclick=goMenu;
+$("splitBtn").onclick=()=>{ if(!P) openSetup(); else if(leaveRun("Stop this run and edit the split?")) openEditor(); };
 
 /* Logitech presenters enumerate as HID keyboards: next=PageDown, prev=PageUp,
    start=F5, stop=Esc, blank=b or period. Arrows and space cover other models.
@@ -1104,6 +1248,7 @@ addEventListener("keydown",ev=>{
   if(tg&&(tg.tagName==="TEXTAREA"||(tg.tagName==="INPUT"&&/^(text|number)$/.test(tg.type)))) return;
   if(!S.length) return;
   if(k==="e"||k==="E"){ev.preventDefault();toggleEdit();return;}
+  if(k==="m"||k==="M"){ev.preventDefault();echo("M","menu");goMenu();return;}
   if(blanked && k!=="b" && k!=="B" && k!=="." && k!=="Escape") return;
   if(k==="PageDown"){ev.preventDefault();echo("Page Down","next slide");next();}
   else if(k==="PageUp"){ev.preventDefault();echo("Page Up","previous slide");back();}
@@ -1132,7 +1277,7 @@ const FONTS={
   mono :'ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace'
 };
 const DEF={theme:"dark",font:"sans",z:100,lh:158,mw:62,ribbon:true,note:true,cues:true,
-  limit:300,wpm:140,hold:3,stretch:false};
+  limit:300,wpm:140,hold:3,stretch:false,libSort:"opened"};
 const TIMING=["limit","wpm","hold","stretch"];
 let O=Object.assign({},DEF);
 const clamp=(v,lo,hi,d)=>{ v=Number(v); return Number.isFinite(v)?Math.min(hi,Math.max(lo,v)):d; };
@@ -1140,6 +1285,7 @@ function optLoad(){
   const s=load(K_OPTS);
   if(s&&typeof s==="object") O=Object.assign({},DEF,s);
   O.limit=clamp(O.limit,10,7200,300); O.wpm=clamp(O.wpm,60,260,140); O.hold=clamp(O.hold,0,60,3); O.stretch=!!O.stretch;
+  if(!Object.prototype.hasOwnProperty.call(SORTS,O.libSort)) O.libSort="opened";
 }
 function optSave(){ store(K_OPTS,O); }
 function optApply(){
@@ -1268,12 +1414,13 @@ function fallback(t,done){
   try{ document.execCommand("copy"); done(); }catch(e){ echo("copy failed","select the text manually"); }
   a.remove();
 }
-function saveTxt(){
-  if(!P) return;
-  const url=URL.createObjectURL(new Blob([exportText(P,T)],{type:"text/plain;charset=utf-8"}));
-  const a=el("a"); a.href=url; a.download=P.name.replace(/\.[^.]+$/,"")+" - with slide markers.txt";
+function safeName(s){ return String(s||"rehearsal").replace(/\.(txt|docx|json)$/i,"").replace(/[\\/:*?"<>|\u0000-\u001F]+/g,"-").trim().slice(0,60)||"rehearsal"; }
+function download(text,name,type){
+  const url=URL.createObjectURL(new Blob([text],{type:type+";charset=utf-8"}));
+  const a=el("a"); a.href=url; a.download=name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
+function saveTxt(){ if(P) download(exportText(P,T),safeName(P.name)+" - with slide markers.txt","text/plain"); }
 $("editBtn").onclick=toggleEdit;
 $("copyAll").onclick=copyAll;
 $("oldEdits").onclick=()=>copyText(oldEditsText(load(K_OLDEDITS)),$("oldEdits"),"Copy my edits from the old version");
@@ -1292,11 +1439,89 @@ function openSetup(){
   if(editing) toggleEdit();
   if(editorOpen) closeEditor();
   setupOpen=true; $("setup").classList.add("on");
-  $("resume").hidden=!P; $("setupCancel").hidden=!P;
-  if(P){ $("resumeName").textContent=P.name;
-    $("resumeInfo").textContent=plural(P.starts.length,"slide")+" · plan "+mmss(PLAN)+" · limit "+mmss(LIMIT); }
-  setupErr(""); detect();
-  setTimeout(()=>{ (P?$("resumeGo"):$("pasteBox")).focus(); },30);
+  $("setupCancel").hidden=!P;
+  setupErr(""); renderLibrary(); detect();
+  setTimeout(()=>{ const first=$("library").querySelector("button.go"); (first||$("pasteBox")).focus(); },30);
+}
+function fmtWhen(ms){
+  if(!ms) return "";
+  const d=new Date(ms);
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+", "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+}
+/* The list, in the chosen order, narrowed by Find. Built node by node: names come
+   from the user's files. */
+function renderLibrary(){
+  const lib=libLoad(LS), box=$("library"), sort=SORTS[O.libSort]?O.libSort:"opened";
+  const shown=sortItems(lib.items,sort,$("libFind").value);
+  box.textContent="";
+  $("setupTitle").textContent=lib.items.length?"Your rehearsals":"Your speech";
+  box.hidden=!lib.items.length; $("newHead").hidden=!lib.items.length;
+  $("libBar").hidden=lib.items.length<2; $("libSort").value=sort;
+  if(lib.items.length&&!shown.length) box.appendChild(el("div","lnone","No rehearsal names contain “"+$("libFind").value.trim()+"”."));
+  shown.forEach(it=>{
+    const row=el("div","lrow"+(P&&P.id===it.id?" cur":"")), info=el("div","grow"), w=SORTS[sort].when;
+    info.appendChild(el("b",null,it.name||"Untitled"));
+    const when=it[w]?(w==="created"?"made ":w==="edited"?"edited ":"opened ")+fmtWhen(it[w]):"";
+    info.appendChild(el("small",null,[plural(it.slides,"slide"),it.plan?"plan "+mmss(it.plan):"",when].filter(Boolean).join(" · ")));
+    row.appendChild(info);
+    const btn=(label,cls,fn,title)=>{ const b=el("button",cls,label); if(title) b.title=title; b.onclick=fn; row.appendChild(b); };
+    btn("Continue","go",()=>openRehearsal(it.id,false));
+    btn("Edit split",null,()=>openRehearsal(it.id,true));
+    btn("Rename",null,()=>renameRehearsal(it.id));
+    btn("Export",null,()=>exportRehearsal(it.id),"Save it as a file you can open on another computer");
+    btn("Delete",null,()=>deleteRehearsal(it.id));
+    box.appendChild(row);
+  });
+  if(libWarn) setupErr(libWarn);
+}
+function openRehearsal(id,edit){
+  if(!(P&&P.id===id)){
+    const p=libGet(LS,id);
+    if(!p){ setupErr("That rehearsal couldn't be read. It may be damaged."); return; }
+    setProject(p,false); ribbon(); refreshPlan();      // opening changes nothing, so nothing to save
+  }
+  libTouch(LS,id,{opened:Date.now()});
+  closeSetup(); if(edit) openEditor(); else reset();
+}
+/* A new name changes no dates: it's neither an edit nor an opening. */
+function renameRehearsal(id){
+  const cur=P&&P.id===id, p=cur?P:libGet(LS,id); if(!p) return;
+  const v=prompt("Name for this rehearsal:",p.name); if(v===null) return;
+  const name=v.replace(/\s+/g," ").trim().slice(0,80); if(!name||name===p.name) return;
+  p.name=name;
+  const old=libLoad(LS).items.find(it=>it.id===id)||{};
+  libPut(LS,p,Object.assign({},old,{name}),false);
+  renderLibrary();
+}
+function exportRehearsal(id){
+  const p=P&&P.id===id?P:libGet(LS,id); if(!p) return;
+  download(rehearsalFileText(p),safeName(p.name)+".rehearsal.json","application/json");
+}
+function deleteRehearsal(id){
+  const it=libLoad(LS).items.find(x=>x.id===id); if(!it) return;
+  if(!confirm("Delete “"+it.name+"”? This can't be undone. Export it first if you might want it again.")) return;
+  libDelete(LS,id);
+  if(P&&P.id===id){ P=null; T=[]; refreshIndex(); derive(); ribbon(); refreshPlan(); clearView(); }
+  $("setupCancel").hidden=!P; renderLibrary();
+}
+function clearView(){
+  $("slideNo").textContent="SLIDE –"; $("label").textContent=""; $("nextLab").textContent="";
+  $("note").hidden=true; $("body").textContent=""; $("segTarget").textContent="0:00";
+}
+function importRehearsal(obj){
+  let p=null; try{ p=validProject(JSON.parse(JSON.stringify(obj))); }catch(e){}
+  if(!p){ setupErr("That rehearsal file is damaged, or from a newer version of this app."); return; }
+  p.id=newId();                     // an import never overwrites an existing rehearsal
+  setProject(p); ribbon(); refreshPlan(); renderLibrary();
+  closeSetup(); reset();
+}
+/* a new rehearsal's name: the file's name, or the speech's first few words */
+function nameFor(meta,text){
+  if(meta.source==="docx"||meta.source==="txt") return meta.name.replace(/\.(txt|docx)$/i,"");
+  if(meta.source==="sample") return "Sample speech";
+  const mk=splitMarkers(text), words=mk.pre.concat(...mk.segs.map(s=>s.lines)).join(" ")
+    .replace(/\[\[[\s\S]*?\]\]|\*\*|\/{2,3}/g," ").split(/\s+/).filter(Boolean);
+  return words.length ? words.slice(0,6).join(" ")+(words.length>6?"…":"") : "Pasted speech";
 }
 function closeSetup(){ setupOpen=false; $("setup").classList.remove("on"); }
 function setupErr(m){ $("setupErr").textContent=m; $("setupErr").hidden=!m; }
@@ -1316,14 +1541,20 @@ function detect(){
 }
 async function takeFile(f){
   setupErr("");
-  try{ const r=await readSpeechFile(f); $("pasteBox").value=r.text; setupMeta={name:r.name,source:r.source}; $("fileName").textContent=r.name; detect(); }
+  try{
+    const r=await readSpeechFile(f);
+    if(r.rehearsal){ importRehearsal(r.rehearsal); return; }
+    $("pasteBox").value=r.text; setupMeta={name:r.name,source:r.source}; $("fileName").textContent=r.name; detect();
+  }
   catch(e){ setupErr(e&&e.message||String(e)); }
 }
+/* A new split is a new rehearsal: it's added to the list, never written over one. */
 function doSplit(){
   const t=$("pasteBox").value; if(!t.trim()) return;
-  if(P&&!confirm("Replace your current speech and its split with this one?")) return;
-  let p; try{ p=newProject(t,setupMeta,+$("countIn").value); }catch(e){ setupErr(e.message); return; }
+  let p; try{ p=newProject(t,{name:nameFor(setupMeta,t),source:setupMeta.source},+$("countIn").value); }catch(e){ setupErr(e.message); return; }
+  p.id=newId();
   setProject(p); ribbon(); refreshPlan(); closeSetup(); openEditor();
+  $("pasteBox").value=""; $("fileName").textContent=""; setupMeta={name:"Pasted text",source:"paste"}; detect();
 }
 $("pasteBox").addEventListener("input",()=>{ clearTimeout(detectTimer); detectTimer=setTimeout(detect,250); });
 $("pasteBox").addEventListener("paste",()=>{ setupMeta={name:"Pasted text",source:"paste"}; $("fileName").textContent=""; });
@@ -1331,9 +1562,10 @@ $("openFile").onclick=()=>$("fileIn").click();
 $("fileIn").onchange=e=>{ const f=e.target.files[0]; if(f) takeFile(f); e.target.value=""; };
 $("sampleBtn").onclick=()=>{ $("pasteBox").value=SAMPLE; setupMeta={name:"Sample speech",source:"sample"}; $("fileName").textContent=""; setupErr(""); detect(); };
 $("splitGo").onclick=doSplit;
+for(const [k,s] of Object.entries(SORTS)){ const o=el("option",null,s.label); o.value=k; $("libSort").appendChild(o); }
+$("libSort").onchange=e=>{ optSet("libSort",e.target.value); renderLibrary(); };   // remembered with the other settings
+$("libFind").addEventListener("input",renderLibrary);
 $("setupCancel").onclick=closeSetup;
-$("resumeGo").onclick=()=>{ closeSetup(); reset(); };
-$("resumeEdit").onclick=()=>{ closeSetup(); openEditor(); };
 $("setup").addEventListener("keydown",e=>{ if(e.key==="Escape"&&P){ e.preventDefault(); closeSetup(); } });
 /* A file dropped anywhere must never replace this page: the browser's default is
    to navigate to it. Over the setup screen, a drop opens it as the speech.   */
@@ -1668,7 +1900,54 @@ async function selfTest(){
     const st3=fake(); st3.setItem("hashing.opts","X"); st3.setItem=()=>{ throw new Error("full"); }; migrateKeys(st3);
     ok("storage: if the copy fails, nothing is removed", st3.m.get("hashing.opts")==="X");
     const src=[...document.scripts].map(s=>s.textContent).join("\n");
-    ok("storage: no clear(), and removeItem only in migrateKeys", !src.includes("localStorage"+".clear(")&&src.split(".remove"+"Item(").length===2);
+    ok("storage: no clear(); removeItem only in migrateKeys, removeOwn and the wrapper", !src.includes("localStorage"+".clear(")&&src.split(".remove"+"Item(").length===4);
+    const st4=fake(); st4.setItem("flowlist.board","KEEP");
+    ok("storage: removeOwn refuses another app's key", removeOwn(st4,"flowlist.board")===false&&st4.getItem("flowlist.board")==="KEEP");
+
+    // your rehearsals
+    const L=fake(), pa=newProject(SAMPLE,{name:"A",source:"sample"},1), pb=newProject("[SLIDE 1] One. [SLIDE 2] Two.",{name:"B"},1);
+    pa.id=newId(); pb.id=newId();
+    ok("list: two rehearsals, newest first", libPut(L,pa,metaOf(pa))==="ok"&&libPut(L,pb,metaOf(pb))==="ok"&&eq(libLoad(L).items.map(x=>x.name),["B","A"])&&libLoad(L).current===pb.id);
+    ok("list: each has its own key under the prefix", L.getItem(K_ITEM(pa.id))!==null&&K_ITEM(pa.id).startsWith(PREFIX));
+    const back2=libGet(L,pa.id);
+    ok("list: a rehearsal reads back whole", back2&&back2.text===pa.text&&eq(back2.starts,pa.starts)&&back2.id===pa.id);
+    pa.name="A2"; libPut(L,pa,Object.assign(metaOf(pa),{name:"A2"}),false);
+    ok("list: rename keeps the order and the current one", eq(libLoad(L).items.map(x=>x.name),["B","A2"])&&libLoad(L).current===pb.id);
+    libDelete(L,pb.id);
+    ok("list: delete removes its key and entry only", L.getItem(K_ITEM(pb.id))===null&&eq(libLoad(L).items.map(x=>x.id),[pa.id])&&L.getItem(K_ITEM(pa.id))!==null);
+    const Lf=fake(); for(let k=0;k<LIB_MAX;k++){ const q=newProject("[SLIDE 1] x.",{name:"n"+k},1); q.id="q"+k+"zz"; libPut(Lf,q,metaOf(q)); }
+    const extra=newProject("[SLIDE 1] y.",{name:"extra"},1); extra.id=newId();
+    ok("list: full at "+LIB_MAX+", nothing deleted to make room", libPut(Lf,extra,metaOf(extra))==="full"&&libLoad(Lf).items.length===LIB_MAX);
+    const Lm=fake(); Lm.setItem(K_PROJ,J(slimProject(newProject(SAMPLE,{name:"Old one",source:"sample"},1)))); Lm.setItem("flowlist.board","KEEP");
+    migrateLibrary(Lm);
+    const lm=libLoad(Lm);
+    ok("list: the old single speech becomes the first rehearsal", lm.items.length===1&&lm.items[0].name==="Old one"&&lm.current===lm.items[0].id&&Lm.getItem(K_PROJ)===null&&Lm.getItem("flowlist.board")==="KEEP", J([...Lm.m.keys()]));
+    const rf=await readSpeechFile(new File([rehearsalFileText(pa)],"A2.rehearsal.json"));
+    const imp=rf.rehearsal&&validProject(JSON.parse(JSON.stringify(rf.rehearsal)));
+    ok("export then open gives the same rehearsal", imp&&imp.text===pa.text&&eq(imp.starts,pa.starts)&&imp.name==="A2");
+    let jthrew=""; try{ await readSpeechFile(new File(['{"hello":1}'],"x.json")); }catch(err){ jthrew=err.message; }
+    ok("a .json that isn't a rehearsal is refused", /isn't a rehearsal/.test(jthrew), jthrew);
+    // sorting and finding
+    const items=[
+      {id:"aaaa",name:"Budget pitch",slides:5,words:300,plan:120,created:3,opened:9,edited:4},
+      {id:"bbbb",name:"alpha talk",  slides:9,words:900,plan:400,created:1,opened:7,edited:8},
+      {id:"cccc",name:"Class 2",     slides:3,words:100,plan:60, created:2,opened:8,edited:6},
+      {id:"dddd",name:"Class 10",    slides:4,words:200,plan:60, created:4,opened:1,edited:2}];
+    const order=(k,q)=>sortItems(items.slice(),k,q).map(x=>x.id).join(",");
+    ok("sort: last opened", order("opened")==="aaaa,cccc,bbbb,dddd", order("opened"));
+    ok("sort: last edited", order("edited")==="bbbb,cccc,aaaa,dddd", order("edited"));
+    ok("sort: newest and oldest made", order("newest")==="dddd,aaaa,cccc,bbbb"&&order("oldest")==="bbbb,cccc,aaaa,dddd");
+    ok("sort: name A-Z ignores case, numbers in order", order("name")==="bbbb,aaaa,cccc,dddd", order("name"));
+    ok("sort: longest first, ties by words", order("longest")==="bbbb,aaaa,dddd,cccc", order("longest"));
+    ok("sort: an unknown name falls back to last opened", order("constructor")===order("opened"));
+    ok("find: case-insensitive, by name", order("opened","CLASS")==="cccc,dddd"&&order("opened","zzz")==="");
+    const Lo=fake(); Lo.setItem(K_INDEX,J({v:1,current:null,items:[{id:"eeee",name:"Old",slides:2,updated:5}]}));
+    const lo=libLoad(Lo).items[0];
+    ok("times: an entry with only the old 'updated' time gets it for all three", lo.created===5&&lo.opened===5&&lo.edited===5);
+    libTouch(Lo,"eeee",{opened:99});
+    const lt=libLoad(Lo);
+    ok("times: opening changes 'opened' only, and makes it current", lt.items[0].opened===99&&lt.items[0].edited===5&&lt.current==="eeee");
+    ok("names: file name, sample, or the speech's first words", nameFor({source:"docx",name:"My talk.docx"},"")==="My talk"&&nameFor({source:"sample"},"")==="Sample speech"&&nameFor({source:"paste"},"[SLIDE 1] Picture the hottest street you walked down.")==="Picture the hottest street you walked…");
     const sp=slimProject(newProject(SAMPLE,{},1));
     ok("storage: unchanged original is stored as null", sp.orig.text===null);
     const back=validProject(JSON.parse(J(sp)));
@@ -1688,9 +1967,10 @@ async function selfTest(){
 
 /* ---- start ------------------------------------------------------------------------ */
 try{ migrateKeys(localStorage); }catch(e){}      // reading the localStorage property itself can throw
+migrateLibrary(LS);
 optLoad(); optApply();
 $("oldEdits").hidden=!oldEditsText(load(K_OLDEDITS));
-P=validProject(load(K_PROJ));
+{ const lib=libLoad(LS); P=lib.current?libGet(LS,lib.current):null; }
 if(P){ T=tokenize(P.text); refreshIndex(); }
 derive(); ribbon(); render(); refreshPlan();
 addEventListener("blur",()=>$("unfocused").classList.add("on"));

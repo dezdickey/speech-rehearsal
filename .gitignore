@@ -31,3 +31,6 @@ tools/fixtures/private/
 
 # LibreOffice lock files
 .~lock.*#
+
+# Office lock/owner files (created while a document is open; can contain the user name)
+~$*

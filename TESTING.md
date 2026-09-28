@@ -4,7 +4,7 @@ Roughly ten minutes. Do the phases in order — Phase A decides whether the rest
 worth running at all.
 
 Everything in one folder: `rehearsal-bridge.ps1`, `rehearsal-bridge.v1.ps1`,
-`Start-Rehearsal-Bridge.cmd`, `speech-rehearsal.html`, `poc.html`, `demo-deck.pptx`.
+`Start Speech Rehearsal.cmd`, `speech-rehearsal.html`, `poc.html`, `demo-deck.pptx`.
 
 ## Before you start
 
@@ -90,21 +90,23 @@ Close LibreOffice first: if PowerPoint automation fails, the bridge falls back t
 driving Impress, which could look like a pass. If PowerPoint was just installed, open
 it once and answer its first-run privacy notice; until then it rejects automation.
 
-1. Double-click `Start-Rehearsal-Bridge.cmd`.
+1. Double-click `Start Speech Rehearsal.cmd`. If `demo-deck.pptx` is already open in
+   PowerPoint, the bridge uses it. If nothing is open, a file picker asks "Which
+   presentation are you rehearsing?": choose `demo-deck.pptx`.
 
 Look for these four things:
 
 | Expected | Meaning |
 |---|---|
-| PowerPoint opens the deck | COM connection succeeded |
+| PowerPoint shows the deck | COM connection succeeded |
 | The slide show starts full screen | `SlideShowSettings.Run()` worked |
-| Console: `PowerPoint slide show running - animations live.` | COM mode, not fallback |
-| A browser opens the rehearsal page | Token handoff via URL fragment worked |
+| Console: `PowerPoint slide show running - animations live. (demo-deck.pptx)` | COM mode, not fallback |
+| A browser opens the rehearsal page, reading **Live PowerPoint ✓** | Token handoff via URL fragment worked |
 
-**If the console says `Could not drive PowerPoint`** it has fallen back to keystroke
-mode. Copy the error message — that is the thing to send me. The most likely cause
-is a Microsoft Store install of Office, which has restricted COM support compared to
-the desktop installer.
+**If the console says `Could not drive PowerPoint`**, copy the error message. The
+most likely cause is a Microsoft Store install of Office, which has restricted COM
+support compared to the desktop installer. With LibreOffice closed and no `-Target`,
+the bridge then has nothing to drive, and opens the app on its own.
 
 2. With the rehearsal page focused, press Page Down on the clicker. The slide show
    should advance and animate. Press `b`; the show should go black. Press `b` again.
@@ -297,6 +299,21 @@ Bugs the first pass found, all fixed the same evening:
    Fixed: the number is capped at the last slide (as Impress mode already did), and
    PowerPoint errors now produce an `ok:false` reply instead of silence. Re-checked:
    requests for slides 5 and 7 answered 200 and the show stayed on slide 4.
+
+**Start-up re-test, 2026-09-28 about 02:15.** This followed the change to how the
+bridge finds its slide show: attach to the open deck, else a file picker, else the
+app alone. All three paths were checked, with the bridge's slide and security checks
+repeated:
+- **Deck already open in PowerPoint:** used, with no "Opening…". The show started.
+  Slides 3, too-far 9 (held on 4), blank and unblank all read back from PowerPoint.
+  Image-tag GET 405, no token 401, wrong token 401, bad Host 403, hostile preflight
+  403, `null` preflight 204, and the show didn't move for any of them.
+- **`-Deck tools/demo-deck.fodp` with LibreOffice closed:** the bridge started
+  LibreOffice, opened the file in Impress and started the show (mode `uno`). Slides 3
+  and 2 read back from Impress; no token 401.
+- **Nothing open, via `Start Speech Rehearsal.cmd`:** the picker appeared, the tester
+  chose `demo-deck.pptx`, and PowerPoint opened it and ran the show. The new tab
+  connected on its own (bridge log `-> slide 1`) and listed the saved rehearsals.
 
 Also seen in Phase A: **PowerPoint's first-run privacy notice blocks automation.**
 Until it's answered, PowerPoint rejects calls (`RPC_E_CALL_REJECTED`) and ignores
